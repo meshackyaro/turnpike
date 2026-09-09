@@ -44,8 +44,40 @@ is proven.
 
 ## Status
 
-Day 1. The seller returns a real `402` on Hedera testnet — verified against the
-default facilitator, which advertises `hedera:testnet` and needs no API key:
+**Day 1 complete — a payment settles on Hedera testnet.**
+
+```
+$ pnpm seller          # terminal 1
+$ pnpm buy             # terminal 2
+
+402 — 1 route(s) offered:
+  hedera:testnet  0.012 HBAR -> 0.0.10438909
+    gas sponsored by facilitator 0.0.9185802
+
+paying…
+
+HTTP 200 — settled
+  tx  0.0.9185802@1788968443.229829086
+```
+
+On-chain, that transaction moves:
+
+| account | | net |
+|---|---|---|
+| `0.0.10438985` | buyer | **−0.01200000 HBAR** |
+| `0.0.10438909` | seller | **+0.01200000 HBAR** |
+| `0.0.9185802` | facilitator | −0.00255176 HBAR (network fee) |
+
+The buyer paid the price and **no gas**. That is the fee-payer model working,
+not just described.
+
+Next: a second route on Arc, and the selector that chooses between them.
+
+<details>
+<summary>The 402 the seller returns</summary>
+
+Verified against the default facilitator, which advertises `hedera:testnet` and
+needs no API key:
 
 ```jsonc
 // PAYMENT-REQUIRED header, base64-decoded. Note extra.feePayer: the
@@ -61,16 +93,26 @@ default facilitator, which advertises `hedera:testnet` and needs no API key:
 }
 ```
 
-Next: the buyer client signs against that and closes the loop.
+</details>
 
-## Notes for the buyer implementation
+## Things that cost time, so they don't cost it twice
 
 - Payment requirements arrive in the **`PAYMENT-REQUIRED` response header**
-  (base64 JSON), not the 402 body — the body is `{}` by default.
-- The resource server must register the scheme
-  (`@x402/hedera/exact/server`) *and* point at a facilitator. With only the
-  facilitator it can price a route but cannot build requirements, and protected
-  routes return 500.
+  (base64 JSON), not the 402 body — the body is `{}` by default. The paid
+  request sends `PAYMENT-SIGNATURE` (v2; `X-PAYMENT` is v1).
+- The resource server needs a registered scheme (`@x402/hedera/exact/server`)
+  **and** a facilitator. With only the facilitator it can price a route but
+  cannot build requirements, and protected routes return 500.
+- `handlePaymentRequired()` only runs registered hooks and returns `null` when
+  none produce headers. Creating a payment directly is
+  `createPaymentPayload()` then `encodePaymentSignatureHeader()`.
+- **Client spend controls are on by default** and permit only recognized
+  default assets, which excludes native HBAR. Allowlist it explicitly with an
+  atomic per-payment cap — this is also where the spend policy will live.
+- `dotenv/config` resolves against the process cwd, so in a monorepo each app
+  must load the workspace-root `.env` by explicit path.
+- Use **ECDSA** Hedera accounts and reference them by `0.0.x` ID, never the
+  `0x…` EVM alias — the scheme's `aliasPolicy` defaults to `reject`.
 
 ## Setup
 
