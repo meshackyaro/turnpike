@@ -10,8 +10,11 @@ config({
 
 import { paymentMiddlewareFromConfig } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
+import type { PaymentOption } from "@x402/core/http";
+import type { Network } from "@x402/core/types";
 import { HEDERA_TESTNET_CAIP2, HBAR_ASSET_ID } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/server";
+import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { forecast } from "./forecast.js";
 
 const PORT = Number(process.env.PORT ?? 4021);
@@ -26,6 +29,40 @@ function required(name: string): string {
 
 const facilitator = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
 
+// The package exports these as plain strings; Network is a `${string}:${string}`.
+const HEDERA: Network = HEDERA_TESTNET_CAIP2 as Network;
+const BASE_SEPOLIA: Network = "eip155:84532";
+const USDC_BASE_SEPOLIA = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+
+// A second route is only honest if we can actually be paid on it.
+const EVM_PAY_TO = process.env.EVM_ADDRESS;
+
+const routes: PaymentOption[] = [
+  {
+    scheme: "exact" as const,
+    network: HEDERA,
+    payTo: PAY_TO,
+    price: { asset: HBAR_ASSET_ID, amount: "1200000" },
+    maxTimeoutSeconds: 60,
+  },
+  ...(EVM_PAY_TO
+    ? [
+        {
+          scheme: "exact" as const,
+          network: BASE_SEPOLIA,
+          payTo: EVM_PAY_TO,
+          price: { asset: USDC_BASE_SEPOLIA, amount: "4000" },
+          maxTimeoutSeconds: 60,
+        },
+      ]
+    : []),
+];
+
+const schemes = [
+  { network: HEDERA, server: new ExactHederaScheme() },
+  { network: BASE_SEPOLIA, server: new ExactEvmScheme() },
+];
+
 const app = express();
 
 app.use(
@@ -35,22 +72,13 @@ app.use(
         description: "24h drift and volatility band for a symbol",
         serviceName: "turnpike/forecast",
         mimeType: "application/json",
-        accepts: [
-          {
-            scheme: "exact",
-            network: HEDERA_TESTNET_CAIP2,
-            payTo: PAY_TO,
-            price: { asset: HBAR_ASSET_ID, amount: "1200000" },
-            maxTimeoutSeconds: 60,
-          },
-          // Arc/USDC route lands here on Sept 11 — a second entry, not a second server.
-        ],
+        accepts: routes,
       },
     },
     facilitator,
     // Without a registered scheme the server can price a route but cannot turn
     // that price into payment requirements, and protected routes 500 instead of 402.
-    [{ network: HEDERA_TESTNET_CAIP2, server: new ExactHederaScheme() }],
+    schemes,
   ),
 );
 
@@ -85,6 +113,16 @@ app.use(
 app.listen(PORT, () => {
   console.log(`seller-forecast listening on :${PORT}`);
   console.log(`  paid route  GET /forecast?symbol=ETH`);
-  console.log(`  paying to   ${PAY_TO} on ${HEDERA_TESTNET_CAIP2}`);
   console.log(`  facilitator ${FACILITATOR_URL}`);
+  console.log(`  offering ${routes.length} route(s):`);
+  for (const r of routes) {
+    const price =
+      typeof r.price === "object" && "amount" in r.price
+        ? `${r.price.amount} ${r.price.asset}`
+        : String(r.price);
+    console.log(`    ${r.network.padEnd(16)} ${price} -> ${String(r.payTo)}`);
+  }
+  if (!EVM_PAY_TO) {
+    console.log(`  (set EVM_ADDRESS to advertise the Base Sepolia route)`);
+  }
 });
