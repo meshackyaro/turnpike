@@ -44,12 +44,40 @@ is proven.
 
 ## Status
 
-Day 1: proving one payment settles on Hedera testnet. Nothing else matters until
-that works.
+Day 1. The seller returns a real `402` on Hedera testnet — verified against the
+default facilitator, which advertises `hedera:testnet` and needs no API key:
+
+```jsonc
+// PAYMENT-REQUIRED header, base64-decoded. Note extra.feePayer: the
+// facilitator injected it, so the buyer needs no HBAR for gas.
+{
+  "x402Version": 2,
+  "accepts": [{
+    "scheme": "exact", "network": "hedera:testnet",
+    "amount": "1200000", "asset": "0.0.0", "payTo": "0.0.12345",
+    "maxTimeoutSeconds": 60,
+    "extra": { "feePayer": "0.0.9185802" }
+  }]
+}
+```
+
+Next: the buyer client signs against that and closes the loop.
+
+## Notes for the buyer implementation
+
+- Payment requirements arrive in the **`PAYMENT-REQUIRED` response header**
+  (base64 JSON), not the 402 body — the body is `{}` by default.
+- The resource server must register the scheme
+  (`@x402/hedera/exact/server`) *and* point at a facilitator. With only the
+  facilitator it can price a route but cannot build requirements, and protected
+  routes return 500.
 
 ## Setup
 
 ```bash
 pnpm install
-cp .env.example .env    # fill in Hedera testnet credentials
+cp .env.example .env    # facilitator URL is pre-filled; add Hedera credentials
+pnpm seller
 ```
+
+Get a funded Hedera testnet account at [portal.hedera.com](https://portal.hedera.com).
