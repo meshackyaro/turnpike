@@ -3,6 +3,7 @@ import express from "express";
 import { paymentMiddlewareFromConfig } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { HEDERA_TESTNET_CAIP2, HBAR_ASSET_ID } from "@x402/hedera";
+import { ExactHederaScheme } from "@x402/hedera/exact/server";
 import { forecast } from "./forecast.js";
 
 const PORT = Number(process.env.PORT ?? 4021);
@@ -39,6 +40,9 @@ app.use(
       },
     },
     facilitator,
+    // Without a registered scheme the server can price a route but cannot turn
+    // that price into payment requirements, and protected routes 500 instead of 402.
+    [{ network: HEDERA_TESTNET_CAIP2, server: new ExactHederaScheme() }],
   ),
 );
 
@@ -57,6 +61,18 @@ app.get("/forecast", (req, res) => {
 });
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
+
+app.use(
+  (
+    err: Error,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    console.error("[seller] unhandled:", err?.stack ?? err);
+    res.status(500).json({ error: err?.message ?? "Internal Server Error" });
+  },
+);
 
 app.listen(PORT, () => {
   console.log(`seller-forecast listening on :${PORT}`);
