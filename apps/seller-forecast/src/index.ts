@@ -1,5 +1,13 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import express from "express";
+
+// One .env at the workspace root; dotenv would otherwise look in this app's cwd.
+config({
+  path: resolve(dirname(fileURLToPath(import.meta.url)), "../../../.env"),
+});
+
 import { paymentMiddlewareFromConfig } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { HEDERA_TESTNET_CAIP2, HBAR_ASSET_ID } from "@x402/hedera";
