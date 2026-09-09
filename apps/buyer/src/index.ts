@@ -3,8 +3,15 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { x402Client } from "@x402/core/client";
 import { x402HTTPClient } from "@x402/core/http";
+import type { Network, PaymentRequirements } from "@x402/core/types";
 import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/client";
+import { ExactEvmScheme } from "@x402/evm/exact/client";
+import { toClientEvmSigner } from "@x402/evm";
+import { privateKeyToAccount } from "viem/accounts";
+import { createPublicClient, http as viemHttp } from "viem";
+import { baseSepolia } from "viem/chains";
+import { chooseRoute, type RoutePolicy, type RouteChoice } from "./selector.js";
 
 // One .env at the workspace root; dotenv would otherwise look in this app's cwd.
 config({
@@ -13,6 +20,10 @@ config({
 
 const RESOURCE =
   process.argv[2] ?? `http://localhost:${process.env.PORT ?? 4021}/forecast?symbol=ETH`;
+
+const HEDERA: Network = "hedera:testnet";
+const BASE: Network = "eip155:84532";
+const USDC_BASE = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 
 function required(name: string): string {
   const value = process.env[name];
@@ -24,50 +35,85 @@ function required(name: string): string {
  * Portal keys are raw hex, which carries no type marker — fromString() would
  * have to guess. The accounts are ECDSA, so say so explicitly.
  */
-function parseKey(raw: string): PrivateKey {
+function parseHederaKey(raw: string): PrivateKey {
   return PrivateKey.fromStringECDSA(raw.replace(/^0x/, ""));
 }
 
-const accountId = required("HEDERA_BUYER_ACCOUNT_ID");
-const signer = createClientHederaSigner(
-  accountId,
-  parseKey(required("HEDERA_BUYER_PRIVATE_KEY")),
-  { network: "hedera:testnet" },
+const hederaAccount = required("HEDERA_BUYER_ACCOUNT_ID");
+const client = new x402Client(selectRoute).register(
+  HEDERA,
+  new ExactHederaScheme(
+    createClientHederaSigner(
+      hederaAccount,
+      parseHederaKey(required("HEDERA_BUYER_PRIVATE_KEY")),
+      { network: HEDERA },
+    ),
+  ),
 );
 
-const client = new x402Client().register(
-  "hedera:*",
-  new ExactHederaScheme(signer),
-);
+// The EVM route is only signable once a key exists. Until then the selector
+// rejects it as unsignable rather than the payment failing halfway through.
+const evmKey = process.env.EVM_PRIVATE_KEY;
+let evmAddress: string | undefined;
 
-// Spend controls are on by default and allow only recognized default assets,
-// which excludes native HBAR. Allowlisting it explicitly — with a hard atomic
-// cap — is the first version of the policy the Ledger signer will later sign.
-const MAX_PER_CALL_TINYBARS = "5000000"; // 0.05 HBAR
+if (evmKey) {
+  const account = privateKeyToAccount(
+    (evmKey.startsWith("0x") ? evmKey : `0x${evmKey}`) as `0x${string}`,
+  );
+  evmAddress = account.address;
+  client.register(
+    BASE,
+    new ExactEvmScheme(
+      toClientEvmSigner(
+        account,
+        createPublicClient({ chain: baseSepolia, transport: viemHttp() }),
+      ),
+    ),
+  );
+}
+
+const policy: RoutePolicy = {
+  preference: evmKey ? [HEDERA, BASE] : [HEDERA],
+  caps: {
+    [`${HEDERA}|0.0.0`]: "5000000", // 0.05 HBAR
+    [`${BASE}|${USDC_BASE}`]: "50000", // 0.05 USDC
+  },
+};
+
+let lastChoice: RouteChoice | undefined;
+// x402Client filters accepts down to networks with a registered scheme before
+// the selector runs, so these two lists differ and the demo should say which
+// routes the policy actually weighed.
+let consideredNetworks: string[] = [];
+
+function selectRoute(
+  _version: number,
+  offered: PaymentRequirements[],
+): PaymentRequirements {
+  consideredNetworks = offered.map((o) => o.network);
+  lastChoice = chooseRoute(policy, offered);
+  return lastChoice.chosen;
+}
 
 client.setSpendControls({
-  allowedAssets: [
-    {
-      network: "hedera:testnet",
-      asset: "0.0.0",
-      maxAmountPerPayment: MAX_PER_CALL_TINYBARS,
-    },
-  ],
-});
-
-client.onPaymentCreationFailure(async (ctx) => {
-  console.error("payment creation failed:", JSON.stringify(ctx, null, 2));
+  allowedAssets: Object.entries(policy.caps).map(([key, maxAmountPerPayment]) => {
+    const [network, asset] = key.split("|");
+    return { network: network as Network, asset, maxAmountPerPayment };
+  }),
 });
 
 const http = new x402HTTPClient(client);
 
-function tinybars(amount: string): string {
-  return `${Number(amount) / 1e8} HBAR`;
-}
+const fmt = (r: PaymentRequirements) =>
+  r.network === HEDERA
+    ? `${Number(r.amount) / 1e8} HBAR`
+    : `${Number(r.amount) / 1e6} USDC`;
 
 async function main() {
-  console.log(`buyer   ${accountId}`);
-  console.log(`GET     ${RESOURCE}\n`);
+  console.log(`buyer    hedera ${hederaAccount}`);
+  console.log(`         evm    ${evmAddress ?? "(no key — Base route unsignable)"}`);
+  console.log(`policy   prefer ${policy.preference.join(" > ")}`);
+  console.log(`GET      ${RESOURCE}\n`);
 
   const unpaid = await fetch(RESOURCE);
 
@@ -81,16 +127,34 @@ async function main() {
 
   console.log(`402 — ${required.accepts.length} route(s) offered:`);
   for (const option of required.accepts) {
-    const price = "amount" in option ? tinybars(String(option.amount)) : "?";
     const feePayer = (option.extra as { feePayer?: string } | undefined)?.feePayer;
-    console.log(`  ${option.network}  ${price} -> ${option.payTo}`);
-    if (feePayer) console.log(`    gas sponsored by facilitator ${feePayer}`);
+    console.log(
+      `  ${option.network.padEnd(16)} ${fmt(option)} -> ${option.payTo}` +
+        (feePayer ? `  (gas: ${feePayer})` : ""),
+    );
   }
 
   // handlePaymentRequired() only runs registered hooks and returns null when
-  // none produce headers; creating the payment is these two calls.
+  // none produce headers; creating the payment is these two calls. The selector
+  // runs inside createPaymentPayload, so lastChoice is populated after it.
   const payload = await http.createPaymentPayload(required);
   const headers = http.encodePaymentSignatureHeader(payload);
+
+  for (const option of required.accepts) {
+    if (!consideredNetworks.includes(option.network)) {
+      console.log(`\n  skipped  ${option.network}: no registered signer`);
+    }
+  }
+
+  if (lastChoice) {
+    console.log(
+      `\nselector weighed ${consideredNetworks.length} of ${required.accepts.length} route(s)`,
+    );
+    console.log(`  chose    ${lastChoice.chosen.network} — ${lastChoice.reason}`);
+    for (const r of lastChoice.rejected) {
+      console.log(`  rejected ${r.requirement.network}: ${r.reason}`);
+    }
+  }
 
   console.log(`\npaying…`);
   const paid = await fetch(RESOURCE, { headers });
@@ -105,12 +169,9 @@ async function main() {
   const settlement = http.getPaymentSettleResponse((n) => paid.headers.get(n));
   const body = await paid.json();
 
-  console.log(`\nHTTP ${paid.status} — settled`);
+  console.log(`\nHTTP ${paid.status} — settled on ${lastChoice?.chosen.network}`);
   if (settlement?.transaction) {
     console.log(`  tx      ${settlement.transaction}`);
-    console.log(
-      `  explorer https://hashscan.io/testnet/transaction/${settlement.transaction}`,
-    );
   }
   console.log(`\n${JSON.stringify(body, null, 2)}`);
 }
