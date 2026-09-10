@@ -31,8 +31,14 @@ const facilitator = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
 
 // The package exports these as plain strings; Network is a `${string}:${string}`.
 const HEDERA: Network = HEDERA_TESTNET_CAIP2 as Network;
-const BASE_SEPOLIA: Network = "eip155:84532";
-const USDC_BASE_SEPOLIA = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+const ARC: Network = (process.env.ARC_NETWORK ?? "eip155:5042002") as Network;
+const USDC_ARC =
+  process.env.ARC_USDC_ADDRESS ?? "0x3600000000000000000000000000000000000000";
+
+// Hedera settles through the default x402 facilitator; Arc through Circle
+// Gateway's, which is the one that advertises eip155:5042002. The middleware
+// takes an array, so each route uses whichever facilitator supports it.
+const CIRCLE_FACILITATOR_URL = process.env.CIRCLE_FACILITATOR_URL;
 
 // A second route is only honest if we can actually be paid on it.
 const EVM_PAY_TO = process.env.EVM_ADDRESS;
@@ -49,9 +55,9 @@ const routes: PaymentOption[] = [
     ? [
         {
           scheme: "exact" as const,
-          network: BASE_SEPOLIA,
+          network: ARC,
           payTo: EVM_PAY_TO,
-          price: { asset: USDC_BASE_SEPOLIA, amount: "4000" },
+          price: { asset: USDC_ARC, amount: "4000" },
           maxTimeoutSeconds: 60,
         },
       ]
@@ -60,7 +66,14 @@ const routes: PaymentOption[] = [
 
 const schemes = [
   { network: HEDERA, server: new ExactHederaScheme() },
-  { network: BASE_SEPOLIA, server: new ExactEvmScheme() },
+  { network: ARC, server: new ExactEvmScheme() },
+];
+
+const facilitators = [
+  facilitator,
+  ...(CIRCLE_FACILITATOR_URL
+    ? [new HTTPFacilitatorClient({ url: CIRCLE_FACILITATOR_URL })]
+    : []),
 ];
 
 const app = express();
@@ -75,7 +88,7 @@ app.use(
         accepts: routes,
       },
     },
-    facilitator,
+    facilitators,
     // Without a registered scheme the server can price a route but cannot turn
     // that price into payment requirements, and protected routes 500 instead of 402.
     schemes,
@@ -113,7 +126,7 @@ app.use(
 app.listen(PORT, () => {
   console.log(`seller-forecast listening on :${PORT}`);
   console.log(`  paid route  GET /forecast?symbol=ETH`);
-  console.log(`  facilitator ${FACILITATOR_URL}`);
+  console.log(`  facilitators ${facilitators.length}`);
   console.log(`  offering ${routes.length} route(s):`);
   for (const r of routes) {
     const price =
@@ -123,6 +136,6 @@ app.listen(PORT, () => {
     console.log(`    ${r.network.padEnd(16)} ${price} -> ${String(r.payTo)}`);
   }
   if (!EVM_PAY_TO) {
-    console.log(`  (set EVM_ADDRESS to advertise the Base Sepolia route)`);
+    console.log(`  (set EVM_ADDRESS to advertise the Arc route)`);
   }
 });
