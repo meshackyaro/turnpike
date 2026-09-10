@@ -9,7 +9,8 @@ import { ExactHederaScheme } from "@x402/hedera/exact/client";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
 import { toClientEvmSigner } from "@x402/evm";
 import { privateKeyToAccount } from "viem/accounts";
-import { createPublicClient, defineChain, http as viemHttp } from "viem";
+import { createPublicClient, http as viemHttp } from "viem";
+import { arcTestnet } from "viem/chains";
 import { chooseRoute, type RoutePolicy, type RouteChoice } from "./selector.js";
 
 // One .env at the workspace root; dotenv would otherwise look in this app's cwd.
@@ -25,21 +26,6 @@ const ARC: Network = (process.env.ARC_NETWORK ?? "eip155:5042002") as Network;
 const USDC_ARC =
   process.env.ARC_USDC_ADDRESS ?? "0x3600000000000000000000000000000000000000";
 
-// viem ships no Arc chain yet. Gas is denominated in USDC, not a separate token.
-const arcTestnet = defineChain({
-  id: Number(ARC.split(":")[1]),
-  name: "Arc Testnet",
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
-  rpcUrls: {
-    default: {
-      http: [process.env.ARC_RPC_URL ?? "https://5042002.rpc.thirdweb.com"],
-    },
-  },
-  blockExplorers: {
-    default: { name: "Arcscan", url: "https://testnet.arcscan.app" },
-  },
-  testnet: true,
-});
 
 function required(name: string): string {
   const value = process.env[name];

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/index.ts",
-    "test": "tsx src/selector.test.ts"
+    "test": "tsx src/selector.test.ts",
+    "deposit": "tsx src/deposit.ts",
+    "balance": "tsx src/balance.ts"
   },
   "dependencies": {
     "@x402/core": "^2.25.0",
