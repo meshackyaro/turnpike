@@ -3,8 +3,8 @@ import type { PaymentRequirements } from "@x402/core/types";
 import { chooseRoute, type RoutePolicy } from "./selector.js";
 
 const HEDERA = "hedera:testnet";
-const BASE = "eip155:84532";
-const USDC_BASE = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+const ARC = "eip155:5042002";
+const USDC_ARC = "0x3600000000000000000000000000000000000000";
 
 const req = (
   network: string,
@@ -21,40 +21,40 @@ const req = (
   }) as PaymentRequirements;
 
 const policy: RoutePolicy = {
-  preference: [HEDERA, BASE],
+  preference: [HEDERA, ARC],
   caps: {
     [`${HEDERA}|0.0.0`]: "5000000",
-    [`${BASE}|${USDC_BASE}`]: "50000",
+    [`${ARC}|${USDC_ARC}`]: "50000",
   },
 };
 
 // Preference order decides when both routes pass.
 {
   const { chosen, reason } = chooseRoute(policy, [
-    req(BASE, USDC_BASE, "4000"),
+    req(ARC, USDC_ARC, "4000"),
     req(HEDERA, "0.0.0", "1200000"),
   ]);
   assert.equal(chosen.network, HEDERA);
-  assert.match(reason, /preferred over eip155:84532/);
+  assert.match(reason, /preferred over eip155:5042002/);
 }
 
 // Flipping preference flips the chain, with no other change.
 {
-  const flipped: RoutePolicy = { ...policy, preference: [BASE, HEDERA] };
+  const flipped: RoutePolicy = { ...policy, preference: [ARC, HEDERA] };
   const { chosen } = chooseRoute(flipped, [
-    req(BASE, USDC_BASE, "4000"),
+    req(ARC, USDC_ARC, "4000"),
     req(HEDERA, "0.0.0", "1200000"),
   ]);
-  assert.equal(chosen.network, BASE);
+  assert.equal(chosen.network, ARC);
 }
 
 // A route over its cap is skipped, not chosen and then rejected downstream.
 {
   const { chosen, rejected } = chooseRoute(policy, [
     req(HEDERA, "0.0.0", "9000000"),
-    req(BASE, USDC_BASE, "4000"),
+    req(ARC, USDC_ARC, "4000"),
   ]);
-  assert.equal(chosen.network, BASE);
+  assert.equal(chosen.network, ARC);
   assert.equal(rejected.length, 1);
   assert.match(rejected[0].reason, /over cap/);
 }

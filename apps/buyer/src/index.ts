@@ -9,8 +9,7 @@ import { ExactHederaScheme } from "@x402/hedera/exact/client";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
 import { toClientEvmSigner } from "@x402/evm";
 import { privateKeyToAccount } from "viem/accounts";
-import { createPublicClient, http as viemHttp } from "viem";
-import { baseSepolia } from "viem/chains";
+import { createPublicClient, defineChain, http as viemHttp } from "viem";
 import { chooseRoute, type RoutePolicy, type RouteChoice } from "./selector.js";
 
 // One .env at the workspace root; dotenv would otherwise look in this app's cwd.
@@ -22,8 +21,25 @@ const RESOURCE =
   process.argv[2] ?? `http://localhost:${process.env.PORT ?? 4021}/forecast?symbol=ETH`;
 
 const HEDERA: Network = "hedera:testnet";
-const BASE: Network = "eip155:84532";
-const USDC_BASE = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+const ARC: Network = (process.env.ARC_NETWORK ?? "eip155:5042002") as Network;
+const USDC_ARC =
+  process.env.ARC_USDC_ADDRESS ?? "0x3600000000000000000000000000000000000000";
+
+// viem ships no Arc chain yet. Gas is denominated in USDC, not a separate token.
+const arcTestnet = defineChain({
+  id: Number(ARC.split(":")[1]),
+  name: "Arc Testnet",
+  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
+  rpcUrls: {
+    default: {
+      http: [process.env.ARC_RPC_URL ?? "https://5042002.rpc.thirdweb.com"],
+    },
+  },
+  blockExplorers: {
+    default: { name: "Arcscan", url: "https://testnet.arcscan.app" },
+  },
+  testnet: true,
+});
 
 function required(name: string): string {
   const value = process.env[name];
@@ -62,21 +78,21 @@ if (evmKey) {
   );
   evmAddress = account.address;
   client.register(
-    BASE,
+    ARC,
     new ExactEvmScheme(
       toClientEvmSigner(
         account,
-        createPublicClient({ chain: baseSepolia, transport: viemHttp() }),
+        createPublicClient({ chain: arcTestnet, transport: viemHttp() }),
       ),
     ),
   );
 }
 
 const policy: RoutePolicy = {
-  preference: evmKey ? [HEDERA, BASE] : [HEDERA],
+  preference: evmKey ? [HEDERA, ARC] : [HEDERA],
   caps: {
     [`${HEDERA}|0.0.0`]: "5000000", // 0.05 HBAR
-    [`${BASE}|${USDC_BASE}`]: "50000", // 0.05 USDC
+    [`${ARC}|${USDC_ARC}`]: "50000", // 0.05 USDC
   },
 };
 
@@ -111,7 +127,7 @@ const fmt = (r: PaymentRequirements) =>
 
 async function main() {
   console.log(`buyer    hedera ${hederaAccount}`);
-  console.log(`         evm    ${evmAddress ?? "(no key — Base route unsignable)"}`);
+  console.log(`         evm    ${evmAddress ?? "(no key — Arc route unsignable)"}`);
   console.log(`policy   prefer ${policy.preference.join(" > ")}`);
   console.log(`GET      ${RESOURCE}\n`);
 
