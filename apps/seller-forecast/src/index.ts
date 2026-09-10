@@ -14,7 +14,7 @@ import type { PaymentOption } from "@x402/core/http";
 import type { Network } from "@x402/core/types";
 import { HEDERA_TESTNET_CAIP2, HBAR_ASSET_ID } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/server";
-import { ExactEvmScheme } from "@x402/evm/exact/server";
+import { GatewayEvmScheme } from "@circle-fin/x402-batching/server";
 import { forecast } from "./forecast.js";
 
 const PORT = Number(process.env.PORT ?? 4021);
@@ -66,7 +66,10 @@ const routes: PaymentOption[] = [
 
 const schemes = [
   { network: HEDERA, server: new ExactHederaScheme() },
-  { network: ARC, server: new ExactEvmScheme() },
+  // GatewayEvmScheme, not ExactEvmScheme: it advertises the EIP-712 domain
+  // (name/version) the Circle batching client requires. ExactEvmScheme discards
+  // the facilitator metadata and Arc is not in its default-asset table.
+  { network: ARC, server: new GatewayEvmScheme() },
 ];
 
 const facilitators = [

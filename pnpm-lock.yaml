@@ -10,6 +10,9 @@ importers:
 
   apps/buyer:
     dependencies:
+      '@circle-fin/x402-batching':
+        specifier: ^3.4.0
+        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@5.9.3))(viem@2.56.3(typescript@5.9.3)(zod@3.25.76))
       '@x402/core':
         specifier: ^2.25.0
         version: 2.25.0
@@ -38,6 +41,9 @@ importers:
 
   apps/seller-forecast:
     dependencies:
+      '@circle-fin/x402-batching':
+        specifier: ^3.4.0
+        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@5.9.3))(viem@2.56.3(typescript@5.9.3)(zod@3.25.76))
       '@x402/core':
         specifier: ^2.25.0
         version: 2.25.0
@@ -148,6 +154,17 @@ packages:
   '@babel/types@7.29.8':
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
+
+  '@circle-fin/x402-batching@3.4.0':
+    resolution: {integrity: sha512-oUwIX8ltS3Tto9Ac23/7ISeVmYQLLxy14/8EopSchBF7K4wNGwzIwlQG5CMJ7iprxy/Br1ipcsW41qBy5h6/EQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@x402/core': ^2.3.0
+      '@x402/evm': ^2.3.0
+      viem: ^2.0.0
+    peerDependenciesMeta:
+      '@x402/evm':
+        optional: true
 
   '@esbuild/aix-ppc64@0.28.2':
     resolution: {integrity: sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ==}
@@ -1854,6 +1871,13 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
+
+  '@circle-fin/x402-batching@3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@5.9.3))(viem@2.56.3(typescript@5.9.3)(zod@3.25.76))':
+    dependencies:
+      '@x402/core': 2.25.0
+      viem: 2.56.3(typescript@5.9.3)(zod@3.25.76)
+    optionalDependencies:
+      '@x402/evm': 2.25.0(typescript@5.9.3)
 
   '@esbuild/aix-ppc64@0.28.2':
     optional: true

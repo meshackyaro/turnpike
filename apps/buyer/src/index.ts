@@ -6,11 +6,8 @@ import { x402HTTPClient } from "@x402/core/http";
 import type { Network, PaymentRequirements } from "@x402/core/types";
 import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/client";
-import { ExactEvmScheme } from "@x402/evm/exact/client";
-import { toClientEvmSigner } from "@x402/evm";
+import { registerBatchScheme } from "@circle-fin/x402-batching/client";
 import { privateKeyToAccount } from "viem/accounts";
-import { createPublicClient, http as viemHttp } from "viem";
-import { arcTestnet } from "viem/chains";
 import { chooseRoute, type RoutePolicy, type RouteChoice } from "./selector.js";
 
 // One .env at the workspace root; dotenv would otherwise look in this app's cwd.
@@ -27,8 +24,15 @@ const USDC_ARC =
   process.env.ARC_USDC_ADDRESS ?? "0x3600000000000000000000000000000000000000";
 
 
-function required(name: string): string {
+/** `??` does not fall through on an empty string, and blank vars are the normal
+ * state of a half-filled .env — so treat empty as absent. */
+function env(name: string): string | undefined {
   const value = process.env[name];
+  return value && value.trim() !== "" ? value : undefined;
+}
+
+function required(name: string): string {
+  const value = env(name);
   if (!value) throw new Error(`${name} is not set — see .env`);
   return value;
 }
@@ -53,9 +57,9 @@ const client = new x402Client(selectRoute).register(
   ),
 );
 
-// The EVM route is only signable once a key exists. Until then the selector
-// rejects it as unsignable rather than the payment failing halfway through.
-const evmKey = process.env.EVM_PRIVATE_KEY;
+// Same ECDSA key as Hedera — EVM keys are not chain-specific, so the buyer's
+// Hedera key already derives its Arc address. No separate key to configure.
+const evmKey = env("EVM_PRIVATE_KEY") ?? env("HEDERA_BUYER_PRIVATE_KEY");
 let evmAddress: string | undefined;
 
 if (evmKey) {
@@ -63,19 +67,22 @@ if (evmKey) {
     (evmKey.startsWith("0x") ? evmKey : `0x${evmKey}`) as `0x${string}`,
   );
   evmAddress = account.address;
-  client.register(
-    ARC,
-    new ExactEvmScheme(
-      toClientEvmSigner(
-        account,
-        createPublicClient({ chain: arcTestnet, transport: viemHttp() }),
-      ),
-    ),
-  );
+
+  // Not ExactEvmScheme: Arc settles through Circle Gateway's batched scheme,
+  // and @x402/evm only speaks EIP-3009 and Permit2. Its server half also
+  // discards the facilitator's EIP-712 domain (`void supportedKind`), and Arc
+  // is absent from its default-asset table, so the domain never arrives and
+  // signing fails. This package is the one that speaks GatewayWalletBatched.
+  registerBatchScheme(client, { signer: account, networks: [ARC] });
 }
 
+// The one value that decides which chain settles. PREFER=arc flips it, and
+// nothing else in the run changes — that is the demo.
+const preference =
+  env("PREFER")?.toLowerCase() === "arc" ? [ARC, HEDERA] : [HEDERA, ARC];
+
 const policy: RoutePolicy = {
-  preference: evmKey ? [HEDERA, ARC] : [HEDERA],
+  preference: evmKey ? preference : [HEDERA],
   caps: {
     [`${HEDERA}|0.0.0`]: "5000000", // 0.05 HBAR
     [`${ARC}|${USDC_ARC}`]: "50000", // 0.05 USDC
@@ -113,7 +120,7 @@ const fmt = (r: PaymentRequirements) =>
 
 async function main() {
   console.log(`buyer    hedera ${hederaAccount}`);
-  console.log(`         evm    ${evmAddress ?? "(no key — Arc route unsignable)"}`);
+  console.log(`         evm    ${evmAddress ?? "(no key)"}`);
   console.log(`policy   prefer ${policy.preference.join(" > ")}`);
   console.log(`GET      ${RESOURCE}\n`);
 
