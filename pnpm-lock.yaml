@@ -39,6 +39,25 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
 
+  apps/ens:
+    dependencies:
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+      viem:
+        specifier: ^2.21.0
+        version: 2.56.3(typescript@5.9.3)(zod@3.25.76)
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.43
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.13
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
   apps/seller-forecast:
     dependencies:
       '@circle-fin/x402-batching':
