@@ -1,0 +1,124 @@
+import { x402Client } from "@x402/core/client";
+import { x402HTTPClient } from "@x402/core/http";
+import type { Network, PaymentRequirements } from "@x402/core/types";
+import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
+import { ExactHederaScheme } from "@x402/hedera/exact/client";
+import { registerBatchScheme } from "@circle-fin/x402-batching/client";
+import { privateKeyToAccount } from "viem/accounts";
+import { chooseRoute, type RouteChoice, type RoutePolicy } from "./selector.js";
+
+export const HEDERA: Network = "hedera:testnet";
+export const ARC: Network = "eip155:5042002";
+export const USDC_ARC = "0x3600000000000000000000000000000000000000";
+
+export interface PaidResult<T = unknown> {
+  body: T;
+  /** Which network settled, and why the policy chose it. */
+  route: string;
+  reason: string;
+  /** Atomic units paid on that route. */
+  amount: string;
+  settlementRef?: string;
+  /** Routes the seller offered that never reached the policy. */
+  skipped: string[];
+}
+
+export interface Wallet {
+  agentAddress: string;
+  hederaAccount: string;
+  policy: RoutePolicy;
+  fetchPaid<T = unknown>(url: string): Promise<PaidResult<T>>;
+}
+
+export interface WalletConfig {
+  hederaAccountId: string;
+  /** Raw hex ECDSA key. The same key signs for Hedera and every EVM chain. */
+  privateKey: string;
+  policy: RoutePolicy;
+}
+
+const normalize = (key: string) =>
+  (key.startsWith("0x") ? key : `0x${key}`) as `0x${string}`;
+
+export function createWallet(config: WalletConfig): Wallet {
+  const account = privateKeyToAccount(normalize(config.privateKey));
+
+  let lastChoice: RouteChoice | undefined;
+  let considered: string[] = [];
+
+  const client = new x402Client((_version, offered: PaymentRequirements[]) => {
+    considered = offered.map((o) => o.network);
+    lastChoice = chooseRoute(config.policy, offered);
+    return lastChoice.chosen;
+  }).register(
+    HEDERA,
+    new ExactHederaScheme(
+      createClientHederaSigner(
+        config.hederaAccountId,
+        // Portal keys are raw hex with no type marker, and these accounts are
+        // ECDSA — fromString() would have to guess.
+        PrivateKey.fromStringECDSA(config.privateKey.replace(/^0x/, "")),
+        { network: HEDERA },
+      ),
+    ),
+  );
+
+  registerBatchScheme(client, { signer: account, networks: [ARC] });
+
+  client.setSpendControls({
+    allowedAssets: Object.entries(config.policy.caps).map(
+      ([key, maxAmountPerPayment]) => {
+        const [network, asset] = key.split("|");
+        return { network: network as Network, asset, maxAmountPerPayment };
+      },
+    ),
+  });
+
+  const http = new x402HTTPClient(client);
+
+  return {
+    agentAddress: account.address,
+    hederaAccount: config.hederaAccountId,
+    policy: config.policy,
+
+    async fetchPaid<T>(url: string): Promise<PaidResult<T>> {
+      const unpaid = await fetch(url);
+
+      if (unpaid.status !== 402) {
+        return {
+          body: (await unpaid.json()) as T,
+          route: "none",
+          reason: "no payment required",
+          amount: "0",
+          skipped: [],
+        };
+      }
+
+      const required = http.getPaymentRequiredResponse((n) =>
+        unpaid.headers.get(n),
+      );
+      const payload = await http.createPaymentPayload(required);
+      const headers = http.encodePaymentSignatureHeader(payload);
+
+      const paid = await fetch(url, { headers });
+      if (!paid.ok) {
+        throw new Error(`payment rejected (HTTP ${paid.status})`);
+      }
+
+      const settlement = http.getPaymentSettleResponse((n) =>
+        paid.headers.get(n),
+      );
+
+      return {
+        body: (await paid.json()) as T,
+        route: lastChoice?.chosen.network ?? "unknown",
+        reason: lastChoice?.reason ?? "",
+        amount: lastChoice?.chosen.amount ?? "0",
+        settlementRef: settlement?.transaction,
+        skipped: required.accepts
+          .map((a) => a.network)
+          .filter((n) => !considered.includes(n)),
+      };
+    },
+  };
+}

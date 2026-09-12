@@ -13,6 +13,9 @@ importers:
       '@circle-fin/x402-batching':
         specifier: ^3.4.0
         version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@5.9.3))(viem@2.56.3(typescript@5.9.3)(zod@3.25.76))
+      '@turnpike/wallet':
+        specifier: workspace:*
+        version: link:../../packages/wallet
       '@x402/core':
         specifier: ^2.25.0
         version: 2.25.0
@@ -110,6 +113,31 @@ importers:
       '@types/express':
         specifier: ^4.17.21
         version: 4.17.25
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.43
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.13
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/wallet:
+    dependencies:
+      '@circle-fin/x402-batching':
+        specifier: ^3.4.0
+        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@5.9.3))(viem@2.56.3(typescript@5.9.3)(zod@3.25.76))
+      '@x402/core':
+        specifier: ^2.25.0
+        version: 2.25.0
+      '@x402/hedera':
+        specifier: ^2.25.0
+        version: 2.25.0(ansi-regex@6.2.2)(ansi-styles@6.2.3)(bn.js@5.2.3)(debug@4.4.1)(protobufjs@8.2.0)(react-native@0.87.1(@babel/core@7.29.7)(react@19.2.8))(strip-ansi@7.1.2)
+      viem:
+        specifier: ^2.21.0
+        version: 2.56.3(typescript@5.9.3)(zod@3.25.76)
+    devDependencies:
       '@types/node':
         specifier: ^20.14.0
         version: 20.19.43

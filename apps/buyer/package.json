@@ -15,7 +15,8 @@
     "dotenv": "^16.4.5",
     "@x402/evm": "^2.25.0",
     "viem": "^2.21.0",
-    "@circle-fin/x402-batching": "^3.4.0"
+    "@circle-fin/x402-batching": "^3.4.0",
+    "@turnpike/wallet": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

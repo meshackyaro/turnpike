@@ -8,7 +8,7 @@ import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/client";
 import { registerBatchScheme } from "@circle-fin/x402-batching/client";
 import { privateKeyToAccount } from "viem/accounts";
-import { chooseRoute, type RoutePolicy, type RouteChoice } from "./selector.js";
+import { chooseRoute, type RoutePolicy, type RouteChoice } from "@turnpike/wallet";
 
 // One .env at the workspace root; dotenv would otherwise look in this app's cwd.
 config({
