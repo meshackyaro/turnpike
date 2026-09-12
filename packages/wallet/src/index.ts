@@ -8,3 +8,10 @@ export {
   type Wallet,
   type PaidResult,
 } from "./wallet.js";
+export {
+  canonicalize,
+  verifyPolicy,
+  type SpendPolicy,
+  type SignedPolicy,
+  type PolicyVerdict,
+} from "./policy.js";

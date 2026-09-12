@@ -85,6 +85,13 @@ export function createWallet(config: WalletConfig): Wallet {
       const unpaid = await fetch(url);
 
       if (unpaid.status !== 402) {
+        // A failed request is not free data. Returning an error body as though
+        // it were a result lets the model reason over a 500 page.
+        if (!unpaid.ok) {
+          throw new Error(
+            `service returned HTTP ${unpaid.status}: ${(await unpaid.text()).slice(0, 200)}`,
+          );
+        }
         return {
           body: (await unpaid.json()) as T,
           route: "none",
@@ -102,7 +109,20 @@ export function createWallet(config: WalletConfig): Wallet {
 
       const paid = await fetch(url, { headers });
       if (!paid.ok) {
-        throw new Error(`payment rejected (HTTP ${paid.status})`);
+        // A rejection re-sends PAYMENT-REQUIRED, whose `error` field says why.
+        // Without it the failure is just "402" and tells you nothing.
+        let detail = "";
+        try {
+          const again = http.getPaymentRequiredResponse((n) =>
+            paid.headers.get(n),
+          );
+          detail = (again as { error?: string }).error ?? "";
+        } catch {
+          detail = (await paid.text()).slice(0, 200);
+        }
+        throw new Error(
+          `payment rejected (HTTP ${paid.status})${detail ? `: ${detail}` : ""}`,
+        );
       }
 
       const settlement = http.getPaymentSettleResponse((n) =>
