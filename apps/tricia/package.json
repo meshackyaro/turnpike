@@ -1,0 +1,22 @@
+{
+  "name": "tricia",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dry-run": "tsx src/dry-run.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
+    "@turnpike/wallet": "workspace:*",
+    "dotenv": "^16.4.5",
+    "viem": "^2.21.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

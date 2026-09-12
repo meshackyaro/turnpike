@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { toHex } from "viem";
 import { openDevice, approveOnDevice, DEFAULT_PATH } from "./device.js";
-import { canonicalize, type SignedPolicy, type SpendPolicy } from "./policy.js";
+import { canonicalize, type SignedPolicy, type SpendPolicy } from "@turnpike/wallet";
 
 const POLICY_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { verifyPolicy, type SignedPolicy } from "./policy.js";
+import { verifyPolicy, type SignedPolicy } from "@turnpike/wallet";
 
 const POLICY_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),

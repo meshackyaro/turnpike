@@ -12,7 +12,7 @@ importers:
     dependencies:
       '@circle-fin/x402-batching':
         specifier: ^3.4.0
-        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@5.9.3))(viem@2.56.3(typescript@5.9.3)(zod@3.25.76))
+        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@5.9.3))(viem@2.56.3(typescript@5.9.3)(zod@4.6.2))
       '@turnpike/wallet':
         specifier: workspace:*
         version: link:../../packages/wallet
@@ -30,7 +30,7 @@ importers:
         version: 16.6.1
       viem:
         specifier: ^2.21.0
-        version: 2.56.3(typescript@5.9.3)(zod@3.25.76)
+        version: 2.56.3(typescript@5.9.3)(zod@4.6.2)
     devDependencies:
       '@types/node':
         specifier: ^20.14.0
@@ -50,12 +50,15 @@ importers:
       '@ledgerhq/hw-transport-node-speculos':
         specifier: ^6.34.7
         version: 6.34.7
+      '@turnpike/wallet':
+        specifier: workspace:*
+        version: link:../../packages/wallet
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
       viem:
         specifier: ^2.21.0
-        version: 2.56.3(typescript@5.9.3)(zod@3.25.76)
+        version: 2.56.3(typescript@5.9.3)(zod@4.6.2)
     devDependencies:
       '@types/node':
         specifier: ^20.14.0
@@ -74,7 +77,7 @@ importers:
         version: 16.6.1
       viem:
         specifier: ^2.21.0
-        version: 2.56.3(typescript@5.9.3)(zod@3.25.76)
+        version: 2.56.3(typescript@5.9.3)(zod@4.6.2)
     devDependencies:
       '@types/node':
         specifier: ^20.14.0
@@ -123,11 +126,39 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
 
+  apps/tricia:
+    dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.125.0
+        version: 0.125.0(zod@4.6.2)
+      '@turnpike/wallet':
+        specifier: workspace:*
+        version: link:../../packages/wallet
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+      viem:
+        specifier: ^2.21.0
+        version: 2.56.3(typescript@5.9.3)(zod@4.6.2)
+      zod:
+        specifier: ^4.0.0
+        version: 4.6.2
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.43
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.13
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
   packages/wallet:
     dependencies:
       '@circle-fin/x402-batching':
         specifier: ^3.4.0
-        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@5.9.3))(viem@2.56.3(typescript@5.9.3)(zod@3.25.76))
+        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@5.9.3))(viem@2.56.3(typescript@5.9.3)(zod@4.6.2))
       '@x402/core':
         specifier: ^2.25.0
         version: 2.25.0
@@ -136,7 +167,7 @@ importers:
         version: 2.25.0(ansi-regex@6.2.2)(ansi-styles@6.2.3)(bn.js@5.2.3)(debug@4.4.1)(protobufjs@8.2.0)(react-native@0.87.1(@babel/core@7.29.7)(react@19.2.8))(strip-ansi@7.1.2)
       viem:
         specifier: ^2.21.0
-        version: 2.56.3(typescript@5.9.3)(zod@3.25.76)
+        version: 2.56.3(typescript@5.9.3)(zod@4.6.2)
     devDependencies:
       '@types/node':
         specifier: ^20.14.0
@@ -155,6 +186,15 @@ packages:
 
   '@adraffy/ens-normalize@1.11.1':
     resolution: {integrity: sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ==}
+
+  '@anthropic-ai/sdk@0.125.0':
+    resolution: {integrity: sha512-Hq5wYlXupzJ9M1Fzqjqa3hObcuigEXVZJqSYDgeZGM3wF4qrNERM5Z1OOAeoT9rlod8awJ3uYyJjbQXp1ckIGg==}
+    hasBin: true
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -703,6 +743,9 @@ packages:
   '@sinclair/typebox@0.27.12':
     resolution: {integrity: sha512-hhyNJ+nbR6ZR7pToHvllEFun9TL0sbL+tk/ON75lo+Xas054uez98qRbsuNt7MBCyZKK4+8Yli/OAGZhmfBZ/g==}
 
+  '@stablelib/base64@1.0.1':
+    resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
+
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
 
@@ -1141,6 +1184,9 @@ packages:
   fast-safe-stringify@2.1.1:
     resolution: {integrity: sha512-W+KJc2dmILlPplD/H4K9l9LcAHAfPtP6BY84uVLXQ6Evcz9Lcg33Y2z1IVblT6xdY54PXYVHEv+0Wpq8Io6zkA==}
 
+  fast-sha256@1.3.0:
+    resolution: {integrity: sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==}
+
   fast-uri@3.1.7:
     resolution: {integrity: sha512-dOvZVzjdZdz7phd9v6jCbwxrBW3fK6n8Rc0CtdmM4bumzMnxywBYhuph6J819RRw/ku+rLbelwfMunktuzVVHg==}
 
@@ -1363,6 +1409,10 @@ packages:
     resolution: {integrity: sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA==}
     engines: {node: '>=6'}
     hasBin: true
+
+  json-schema-to-ts@3.1.1:
+    resolution: {integrity: sha512-+DWg8jCJG2TEnpy7kOm/7/AxaYoaRbjVB4LFZLySZlWn8exGs3A4OLJR966cVvU26N7X9TWxl+Jsw7dzAqKT6g==}
+    engines: {node: '>=16'}
 
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
@@ -1853,6 +1903,9 @@ packages:
     resolution: {integrity: sha512-WjlahMgHmCJpqzU8bIBy4qtsZdU9lRlcZE3Lvyej6t4tuOuv1vk57OW3MBrj6hXBFx/nNoC9MPMTcr5YA7NQbg==}
     engines: {node: '>=6'}
 
+  standardwebhooks@1.1.1:
+    resolution: {integrity: sha512-bCbX9ZEyFkWPsRz7Bl3NuQUJohmwGSev/yhr7vhaGPlc4AfIrspIRa6cPTBuI1ItmrTDJ4d/S2hCsfe4+vQGnQ==}
+
   statuses@1.5.0:
     resolution: {integrity: sha512-OpZ3zP+jT1PI7I8nemJX4AKmAX070ZkYPVWV/AaKTJl+tXCTGyVdC1a4SL8RUQYEwk/f34ZX8UTykN68FwrqAA==}
     engines: {node: '>= 0.6'}
@@ -1913,6 +1966,9 @@ packages:
   toidentifier@1.0.1:
     resolution: {integrity: sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==}
     engines: {node: '>=0.6'}
+
+  ts-algebra@2.0.0:
+    resolution: {integrity: sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw==}
 
   tslib@2.7.0:
     resolution: {integrity: sha512-gLXCKdN1/j47AiHiOkJN69hJmcbGTHI0ImLmbYLHykhgeN0jVGola9yVjFgzCUklsZQMW55o+dW7IXv3RCXDzA==}
@@ -2058,11 +2114,21 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.6.2:
+    resolution: {integrity: sha512-lh5RCAGFa1Cm2hjtNwLQhSs/AsqdWnTQaBER9fEwN/88pSh7KOtJavtBx/0VlkN/uFd61SwYmljLMDAsHlvzBQ==}
+
 snapshots:
 
   '@adraffy/ens-normalize@1.10.1': {}
 
   '@adraffy/ens-normalize@1.11.1': {}
+
+  '@anthropic-ai/sdk@0.125.0(zod@4.6.2)':
+    dependencies:
+      json-schema-to-ts: 3.1.1
+      standardwebhooks: 1.1.1
+    optionalDependencies:
+      zod: 4.6.2
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -2170,6 +2236,13 @@ snapshots:
     dependencies:
       '@x402/core': 2.25.0
       viem: 2.56.3(typescript@5.9.3)(zod@3.25.76)
+    optionalDependencies:
+      '@x402/evm': 2.25.0(typescript@5.9.3)
+
+  '@circle-fin/x402-batching@3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@5.9.3))(viem@2.56.3(typescript@5.9.3)(zod@4.6.2))':
+    dependencies:
+      '@x402/core': 2.25.0
+      viem: 2.56.3(typescript@5.9.3)(zod@4.6.2)
     optionalDependencies:
       '@x402/evm': 2.25.0(typescript@5.9.3)
 
@@ -2726,6 +2799,8 @@ snapshots:
 
   '@sinclair/typebox@0.27.12': {}
 
+  '@stablelib/base64@1.0.1': {}
+
   '@types/body-parser@1.19.6':
     dependencies:
       '@types/connect': 3.4.38
@@ -2860,6 +2935,11 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
       zod: 3.25.76
+
+  abitype@1.2.3(typescript@5.9.3)(zod@4.6.2):
+    optionalDependencies:
+      typescript: 5.9.3
+      zod: 4.6.2
 
   accepts@1.3.8:
     dependencies:
@@ -3256,6 +3336,8 @@ snapshots:
 
   fast-safe-stringify@2.1.1: {}
 
+  fast-sha256@1.3.0: {}
+
   fast-uri@3.1.7: {}
 
   fb-dotslash@0.5.8: {}
@@ -3469,6 +3551,11 @@ snapshots:
   jsc-safe-url@0.2.4: {}
 
   jsesc@3.1.0: {}
+
+  json-schema-to-ts@3.1.1:
+    dependencies:
+      '@babel/runtime': 7.29.7
+      ts-algebra: 2.0.0
 
   json-schema-traverse@1.0.0: {}
 
@@ -3777,6 +3864,21 @@ snapshots:
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
       abitype: 1.2.3(typescript@5.9.3)(zod@3.25.76)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - zod
+
+  ox@0.14.44(typescript@5.9.3)(zod@4.6.2):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/ciphers': 1.3.0
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@5.9.3)(zod@4.6.2)
       eventemitter3: 5.0.1
     optionalDependencies:
       typescript: 5.9.3
@@ -4100,6 +4202,11 @@ snapshots:
     dependencies:
       type-fest: 0.7.1
 
+  standardwebhooks@1.1.1:
+    dependencies:
+      '@stablelib/base64': 1.0.1
+      fast-sha256: 1.3.0
+
   statuses@1.5.0: {}
 
   statuses@2.0.2: {}
@@ -4157,6 +4264,8 @@ snapshots:
       is-number: 7.0.0
 
   toidentifier@1.0.1: {}
+
+  ts-algebra@2.0.0: {}
 
   tslib@2.7.0: {}
 
@@ -4218,6 +4327,23 @@ snapshots:
       - utf-8-validate
       - zod
 
+  viem@2.56.3(typescript@5.9.3)(zod@4.6.2):
+    dependencies:
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@5.9.3)(zod@4.6.2)
+      isows: 1.0.7(ws@8.21.0)
+      ox: 0.14.44(typescript@5.9.3)(zod@4.6.2)
+      ws: 8.21.0
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - zod
+
   vlq@1.0.1: {}
 
   walker@1.0.8:
@@ -4261,3 +4387,5 @@ snapshots:
       yargs-parser: 21.1.1
 
   zod@3.25.76: {}
+
+  zod@4.6.2: {}
