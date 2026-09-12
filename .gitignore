@@ -11,3 +11,4 @@ dist/
 *.log
 .commitment-*.json
 .speculos/
+policy.signed.json

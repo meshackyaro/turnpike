@@ -36,13 +36,40 @@ export async function openDevice(): Promise<Device> {
   return { transport, eth: new Eth(transport) };
 }
 
-/** Presses right a few times then both — confirming a prompt on the screen. */
-export async function approveOnDevice(presses = 3): Promise<void> {
-  for (let i = 0; i < presses; i++) {
+/**
+ * Walks the confirmation flow by reading the screen rather than pressing a
+ * fixed number of times. Counting presses overshoots "Sign message" onto
+ * "Reject" and the device answers 0x6985 — a denial, which looks like a bug in
+ * the signing code rather than bad navigation.
+ */
+export async function approveOnDevice(maxSteps = 20): Promise<string[]> {
+  const seen: string[] = [];
+
+  for (let step = 0; step < maxSteps; step++) {
+    const screen = (await readScreen()).join(" ");
+    if (screen) seen.push(screen);
+
+    if (/sign message|approve|accept|confirm/i.test(screen)) {
+      await press("both");
+      return seen;
+    }
+    if (/reject|cancel|deny/i.test(screen)) {
+      // Walked past the approve option — go back one rather than confirm a denial.
+      await press("left");
+      await new Promise((r) => setTimeout(r, 200));
+      const back = (await readScreen()).join(" ");
+      if (/sign message|approve|accept|confirm/i.test(back)) {
+        await press("both");
+        return [...seen, back];
+      }
+      throw new Error(`no approve step found; screens: ${seen.join(" | ")}`);
+    }
+
     await press("right");
-    await new Promise((r) => setTimeout(r, 150));
+    await new Promise((r) => setTimeout(r, 200));
   }
-  await press("both");
+
+  throw new Error(`approve step never appeared; screens: ${seen.join(" | ")}`);
 }
 
 export async function press(button: "left" | "right" | "both"): Promise<void> {

@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "address": "tsx src/address.ts"
+    "address": "tsx src/address.ts",
+    "sign-policy": "tsx src/sign-policy.ts",
+    "verify": "tsx src/verify.ts"
   },
   "dependencies": {
     "@ledgerhq/hw-app-eth": "^6.45.0",
