@@ -79,7 +79,47 @@ const facilitators = [
     : []),
 ];
 
+/**
+ * One transient fetch failure during the middleware's startup sync makes it
+ * conclude a network is unsupported, and it throws RouteConfigurationError and
+ * kills the process. Confirming the facilitators answer first turns a flaky
+ * boot into a slow one.
+ */
+async function waitForFacilitators(urls: string[], attempts = 6): Promise<void> {
+  for (const url of urls) {
+    let lastError: unknown;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const res = await fetch(`${url}/supported`, {
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (res.ok) {
+          lastError = undefined;
+          break;
+        }
+        lastError = new Error(`HTTP ${res.status}`);
+      } catch (error) {
+        lastError = error;
+      }
+      await new Promise((r) => setTimeout(r, 2000 * (i + 1)));
+    }
+    if (lastError) {
+      throw new Error(
+        `facilitator ${url} unreachable after ${attempts} attempts: ${
+          lastError instanceof Error ? lastError.message : String(lastError)
+        }`,
+      );
+    }
+    console.log(`  facilitator ok  ${url}`);
+  }
+}
+
 const app = express();
+
+await waitForFacilitators([
+  FACILITATOR_URL,
+  ...(CIRCLE_FACILITATOR_URL ? [CIRCLE_FACILITATOR_URL] : []),
+]);
 
 app.use(
   paymentMiddlewareFromConfig(
