@@ -4,196 +4,278 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Turnpike</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 :root {
-  --surface: #fcfcfb;
+  /* chrome — a cool off-white, chosen rather than inherited */
+  --bg: #f4f6f5;
   --panel: #ffffff;
-  --ink: #15201f;
-  --ink-2: #4a5957;
-  --ink-3: #7b8a87;
-  --rule: #dfe5e3;
+  --panel-2: #fafbfa;
+  --ink: #0e1614;
+  --ink-2: #46534f;
+  --ink-3: #8a9793;
+  --hair: #e3e8e5;
+  --hair-2: #eef1ef;
+
+  /* data — validated for CVD separation, do not substitute by eye */
   --hedera: #2a78d6;
   --arc: #eb6834;
   --good: #0ca30c;
-  --warn: #eda100;
   --bad: #e34948;
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --sans: "Archivo", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+  --r: 12px;
+  --shadow: 0 1px 2px rgba(14,22,20,.04), 0 8px 24px -12px rgba(14,22,20,.10);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: #1a1a19;
-    --panel: #232322;
-    --ink: #eceeed;
-    --ink-2: #a8b2b0;
-    --ink-3: #7c8785;
-    --rule: #33352f;
+    --bg: #0e100f;
+    --panel: #171a19;
+    --panel-2: #1c201e;
+    --ink: #e9edeb;
+    --ink-2: #a4afab;
+    --ink-3: #6f7d79;
+    --hair: #262b29;
+    --hair-2: #1f2422;
     --hedera: #3987e5;
     --arc: #d95926;
     --good: #2fb82f;
+    --bad: #e66767;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.6);
   }
 }
+
 * { box-sizing: border-box; }
+html { -webkit-font-smoothing: antialiased; }
 body {
-  margin: 0; background: var(--surface); color: var(--ink);
-  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--sans); font-size: 15px; line-height: 1.5;
 }
-.wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 72px; }
+.wrap { max-width: 1140px; margin: 0 auto; padding: 34px 24px 90px; }
 
-header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
-h1 { font-size: 1.5rem; margin: 0; letter-spacing: -.02em; }
-.sub { color: var(--ink-3); font-size: .9rem; }
-.live { margin-left: auto; font-family: var(--mono); font-size: .72rem;
-  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
-  display: flex; align-items: center; gap: 7px; }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
-.dot.off { background: var(--bad); }
+/* ── masthead ─────────────────────────────────────────────── */
+header {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding-bottom: 18px; border-bottom: 1px solid var(--hair);
+}
+.mark {
+  width: 30px; height: 30px; border-radius: 8px; flex: none;
+  background: linear-gradient(135deg, var(--hedera), var(--arc));
+  position: relative;
+}
+.mark::after {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(90deg,
+    transparent 0 5px, rgba(255,255,255,.75) 5px 7px);
+  border-radius: inherit; opacity: .55;
+}
+h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -.025em; margin: 0; }
+.tagline { color: var(--ink-3); font-size: .88rem; letter-spacing: -.005em; }
+.live {
+  margin-left: auto; font-family: var(--mono); font-size: .68rem;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--hair); border-radius: 999px; padding: 5px 12px 5px 10px;
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); flex: none; }
+.dot::after {
+  content: ""; display: block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--good); animation: pulse 2s ease-out infinite;
+}
+.dot.off, .dot.off::after { background: var(--bad); animation: none; }
+@keyframes pulse { 0% { transform: scale(1); opacity: .7 } 70%,100% { transform: scale(3); opacity: 0 } }
 
-.grid { display: grid; gap: 14px; margin-top: 22px; }
-.row3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.panel { background: var(--panel); border: 1px solid var(--rule);
-  border-radius: 10px; padding: 16px 18px; }
-.label { font-family: var(--mono); font-size: .68rem; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--ink-3); margin-bottom: 9px; }
-.big { font-size: 2rem; font-weight: 600; letter-spacing: -.02em;
-  font-variant-numeric: tabular-nums; line-height: 1.1; }
-.note { color: var(--ink-3); font-size: .85rem; margin-top: 3px; }
+/* ── layout ───────────────────────────────────────────────── */
+.grid { display: grid; gap: 16px; }
+.stats { grid-template-columns: repeat(auto-fit, minmax(238px, 1fr)); margin-top: 24px; }
+.two { grid-template-columns: 1.35fr 1fr; margin-top: 16px; }
+@media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
 
-/* budget meter — one value against a ceiling, so a meter, not a chart */
-.meter { height: 10px; border-radius: 5px; background: var(--rule);
-  overflow: hidden; margin-top: 12px; display: flex; }
-.meter i { display: block; height: 100%; }
+.panel {
+  background: var(--panel); border: 1px solid var(--hair);
+  border-radius: var(--r); padding: 18px 20px; box-shadow: var(--shadow);
+  min-width: 0;
+}
+.panel.flush { padding-bottom: 8px; }
+.label {
+  font-family: var(--mono); font-size: .64rem; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
+  display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+}
+.label::after { content: ""; flex: 1; height: 1px; background: var(--hair-2); }
+
+.stat { font-family: var(--mono); font-weight: 600; font-size: 2.1rem;
+  letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat .unit { color: var(--ink-3); font-size: 1.1rem; font-weight: 500; }
+.sub { color: var(--ink-3); font-size: .82rem; margin-top: 7px; }
+
+/* meter — one value against a ceiling */
+.meter { height: 8px; border-radius: 4px; background: var(--hair);
+  display: flex; margin-top: 15px; overflow: hidden; }
+.meter i { display: block; height: 100%; min-width: 2px; }
 .meter i + i { margin-left: 2px; }
 
-/* route split — two categories, direct-labelled, no legend box needed */
-.split { display: flex; height: 30px; border-radius: 6px; overflow: hidden; margin-top: 4px; }
-.split i { display: block; height: 100%; }
+/* ── live 402 ─────────────────────────────────────────────── */
+.svc + .svc { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--hair-2); }
+.svc-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.svc-h b { font-size: 1rem; font-weight: 600; letter-spacing: -.01em; }
+.svc-h em { font-style: normal; color: var(--ink-3); font-size: .84rem; }
+.offers { display: grid; gap: 10px; margin-top: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); }
+.offer {
+  background: var(--panel-2); border: 1px solid var(--hair);
+  border-radius: 10px; padding: 13px 15px; position: relative; overflow: hidden;
+}
+.offer::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: var(--c); }
+.offer .rt { display: flex; align-items: center; gap: 8px; font-weight: 600;
+  font-size: .9rem; letter-spacing: -.005em; }
+.offer .amt { font-family: var(--mono); font-size: 1.28rem; font-weight: 600;
+  letter-spacing: -.02em; margin-top: 9px; font-variant-numeric: tabular-nums; }
+.offer .amt small { font-size: .68rem; color: var(--ink-3); font-weight: 400;
+  letter-spacing: .02em; margin-left: 5px; }
+.offer .meta { font-family: var(--mono); font-size: .68rem; color: var(--ink-3);
+  margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.offer .meta:first-of-type { margin-top: 10px; }
+.claim { font-size: .84rem; color: var(--ink-2); margin-top: 14px;
+  padding-top: 12px; border-top: 1px dashed var(--hair); }
+.claim b { font-weight: 600; color: var(--ink); }
+
+/* ── split ────────────────────────────────────────────────── */
+.split { display: flex; height: 34px; border-radius: 8px; overflow: hidden; }
+.split i { display: block; height: 100%; min-width: 4px; }
 .split i + i { margin-left: 2px; }
-.keys { display: flex; gap: 18px; margin-top: 12px; flex-wrap: wrap; }
-.key { display: flex; align-items: center; gap: 7px; font-size: .86rem; }
-.sw { width: 10px; height: 10px; border-radius: 2px; flex: none; }
-.key b { font-variant-numeric: tabular-nums; font-weight: 600; }
-.key span { color: var(--ink-3); }
+.keys { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.key { display: flex; align-items: baseline; gap: 9px; font-size: .87rem; }
+.sw { width: 9px; height: 9px; border-radius: 2px; flex: none; transform: translateY(-1px); }
+.key .nm { font-weight: 600; }
+.key .vl { margin-left: auto; font-family: var(--mono);
+  font-variant-numeric: tabular-nums; font-weight: 500; }
+.key .ct { color: var(--ink-3); font-size: .8rem; }
 
-table { width: 100%; border-collapse: collapse; font-size: .87rem; }
-th { text-align: left; font-family: var(--mono); font-size: .66rem;
-  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
-  font-weight: 500; padding: 0 10px 9px 0; white-space: nowrap; }
-td { padding: 9px 10px 9px 0; border-top: 1px solid var(--rule);
-  vertical-align: top; }
-td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
-td.ref { font-family: var(--mono); font-size: .78rem; color: var(--ink-3);
-  max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tag { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.scroll { overflow-x: auto; }
-tbody tr.fresh { animation: in .5s ease-out; }
-@keyframes in { from { background: color-mix(in oklab, var(--good) 14%, transparent); } }
-@media (prefers-reduced-motion: reduce) { tbody tr.fresh { animation: none; } }
-
-.pill { font-family: var(--mono); font-size: .7rem; padding: 3px 8px;
-  border-radius: 999px; border: 1px solid currentColor; }
+/* ── custody ──────────────────────────────────────────────── */
+.pill { display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: .68rem; letter-spacing: .06em;
+  padding: 5px 11px; border-radius: 999px;
+  border: 1px solid currentColor; font-weight: 500; }
 .pill.ok { color: var(--good); }
 .pill.no { color: var(--bad); }
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px;
-  font-size: .84rem; margin-top: 10px; }
+.kv { display: grid; grid-template-columns: auto minmax(0,1fr);
+  gap: 7px 16px; font-size: .8rem; margin-top: 15px; }
 .kv dt { color: var(--ink-3); }
-.kv dd { margin: 0; font-family: var(--mono); font-size: .8rem;
-  overflow: hidden; text-overflow: ellipsis; }
-.empty { color: var(--ink-3); padding: 26px 0; text-align: center; font-size: .9rem; }
-
-/* services — the live 402, rendered */
-.svc + .svc { margin-top: 14px; border-top: 1px solid var(--rule); padding-top: 14px; }
-.svc-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.svc-h b { font-size: .98rem; }
-.svc-h .sub { font-size: .82rem; }
-.offers { display: grid; gap: 8px; margin-top: 11px;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
-.offer { border: 1px solid var(--rule); border-left: 3px solid var(--r);
-  border-radius: 7px; padding: 10px 12px; }
-.offer .r { display: flex; align-items: center; gap: 7px; font-weight: 600;
-  font-size: .9rem; margin-bottom: 5px; }
-.offer .p { font-family: var(--mono); font-size: .95rem;
-  font-variant-numeric: tabular-nums; }
-.offer .m { font-family: var(--mono); font-size: .72rem; color: var(--ink-3);
-  margin-top: 5px; overflow: hidden; text-overflow: ellipsis; }
-.offers-note { font-size: .82rem; color: var(--ink-3); margin-top: 10px; }
-
-/* agent transcript */
-.act { display: grid; grid-template-columns: 54px 1fr; gap: 3px 12px;
-  font-size: .88rem; }
-.act dt { font-family: var(--mono); font-size: .64rem; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--ink-3); padding-top: 4px; }
-.act dd { margin: 0 0 10px; }
-.act dd .d { color: var(--ink-3); font-size: .82rem; font-family: var(--mono); }
-.act dd.answer { white-space: pre-wrap; border-left: 2px solid var(--good);
-  padding-left: 11px; }
-
-/* custody refusal */
-.tamper { margin-top: 12px; border-top: 1px solid var(--rule); padding-top: 11px; }
-.tamper .t { font-family: var(--mono); font-size: .78rem; }
-.tamper .why { color: var(--ink-3); font-size: .8rem; margin-top: 5px;
-  word-break: break-word; }
+.kv dd { margin: 0; font-family: var(--mono); font-size: .74rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tamper { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--hair); }
+.tamper .ln { font-family: var(--mono); font-size: .76rem; color: var(--ink-2); }
 .strike { text-decoration: line-through; color: var(--ink-3); }
+.verdict { font-family: var(--mono); font-size: .82rem; font-weight: 600;
+  letter-spacing: .08em; margin-top: 8px; }
+.tamper .why { color: var(--ink-3); font-size: .74rem; margin-top: 6px;
+  line-height: 1.45; word-break: break-word; }
+
+/* ── agent ────────────────────────────────────────────────── */
+.act { position: relative; padding-left: 20px; margin: 0; }
+.act::before { content: ""; position: absolute; left: 4px; top: 4px; bottom: 10px;
+  width: 1px; background: var(--hair); }
+.row { position: relative; padding-bottom: 16px; }
+.row::before { content: ""; position: absolute; left: -20px; top: 5px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--panel); border: 2px solid var(--ink-3); }
+.row.answer::before { border-color: var(--good); }
+.row.question::before { border-color: var(--hedera); }
+.kind { font-family: var(--mono); font-size: .62rem; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--ink-3); }
+.txt { margin-top: 3px; }
+.row.answer .txt { white-space: pre-wrap; }
+.det { font-family: var(--mono); font-size: .74rem; color: var(--ink-3); margin-top: 3px; }
+
+/* ── feed ─────────────────────────────────────────────────── */
+.scroll { overflow-x: auto; margin: 0 -20px; padding: 0 20px; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+th { text-align: left; font-family: var(--mono); font-size: .62rem;
+  font-weight: 500; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-3); padding: 0 14px 11px 0; white-space: nowrap; }
+td { padding: 11px 14px 11px 0; border-top: 1px solid var(--hair-2); vertical-align: middle; }
+tbody tr:hover { background: var(--panel-2); }
+td.num { font-family: var(--mono); font-variant-numeric: tabular-nums;
+  white-space: nowrap; font-size: .82rem; }
+td.strong { font-weight: 600; }
+td.ref { font-family: var(--mono); font-size: .72rem; color: var(--ink-3);
+  max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; font-weight: 500; }
+tbody tr.fresh td { animation: land .9s ease-out; }
+@keyframes land {
+  0% { background: color-mix(in oklab, var(--good) 20%, transparent); }
+  100% { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  tbody tr.fresh td { animation: none; }
+  .dot::after { animation: none; }
+}
+.empty { color: var(--ink-3); padding: 30px 0; text-align: center; font-size: .87rem; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
+    <div class="mark"></div>
     <h1>Turnpike</h1>
-    <span class="sub">a toll road for AI agents</span>
+    <span class="tagline">a toll road for AI agents</span>
     <span class="live"><span class="dot" id="dot"></span><span id="livetext">connecting</span></span>
   </header>
 
-  <div class="grid row3">
+  <div class="grid stats">
     <div class="panel">
       <div class="label">Settled</div>
-      <div class="big" id="total">$0.00000</div>
-      <div class="note" id="calls">no calls yet</div>
+      <div class="stat" id="total">$0<span class="unit">.00000</span></div>
+      <div class="sub" id="calls">no calls yet</div>
     </div>
     <div class="panel">
       <div class="label">Against ceiling</div>
-      <div class="big" id="pct">0%</div>
-      <div class="meter" id="meter"><i style="width:0"></i></div>
-      <div class="note" id="budget"></div>
+      <div class="stat" id="pct">0<span class="unit">%</span></div>
+      <div class="meter" id="meter"></div>
+      <div class="sub" id="budget"></div>
     </div>
     <div class="panel">
       <div class="label">Custody</div>
       <div id="policyPill"><span class="pill no">no policy</span></div>
       <dl class="kv" id="policyKv"></dl>
-      <div class="tamper" id="tamper"></div>
     </div>
   </div>
 
-  <div class="grid" style="margin-top:14px">
+  <div class="grid" style="margin-top:16px">
     <div class="panel">
       <div class="label">On the market &mdash; live 402</div>
       <div id="services"><div class="empty">probing services&hellip;</div></div>
     </div>
   </div>
 
-  <div class="grid" style="margin-top:14px">
+  <div class="grid two">
     <div class="panel">
       <div class="label">Tricia</div>
-      <dl class="act" id="activity"></dl>
+      <div class="act" id="activity"></div>
       <div class="empty" id="actEmpty">She has not been asked anything yet.</div>
     </div>
-  </div>
-
-  <div class="grid" style="margin-top:14px">
     <div class="panel">
       <div class="label">Where it settled</div>
       <div class="split" id="split"></div>
       <div class="keys" id="keys"></div>
+      <div class="tamper" id="tamper"></div>
     </div>
   </div>
 
-  <div class="grid" style="margin-top:14px">
-    <div class="panel">
+  <div class="grid" style="margin-top:16px">
+    <div class="panel flush">
       <div class="label">Settlements</div>
       <div class="scroll">
         <table>
           <thead><tr>
             <th>Time</th><th>Service</th><th>Route</th>
-            <th>Amount</th><th>USD</th><th>Why</th><th>Reference</th>
+            <th>Amount</th><th>USD</th><th>Why that route</th><th>Reference</th>
           </tr></thead>
           <tbody id="feed"></tbody>
         </table>
@@ -208,7 +290,13 @@ const COLOR = { "hedera:testnet": "var(--hedera)", "eip155:5042002": "var(--arc)
 const NAME  = { "hedera:testnet": "Hedera", "eip155:5042002": "Arc" };
 const color = r => COLOR[r] || "var(--ink-3)";
 const name  = r => NAME[r] || r;
-const usd   = n => "$" + n.toFixed(5);
+const esc   = t => String(t).replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+const money = n => {
+  const s = "$" + n.toFixed(5);
+  const i = s.indexOf(".");
+  return s.slice(0, i) + `<span class="unit">` + s.slice(i) + `</span>`;
+};
+const usd = n => "$" + n.toFixed(5);
 
 let seen = 0;
 
@@ -216,40 +304,41 @@ function render(s) {
   const rs = s.receipts || [];
   const total = rs.reduce((t, r) => t + (r.usd || 0), 0);
 
-  document.getElementById("total").textContent = usd(total);
+  document.getElementById("total").innerHTML = money(total);
   document.getElementById("calls").textContent =
-    rs.length ? rs.length + (rs.length === 1 ? " call" : " calls") : "no calls yet";
+    rs.length ? `${rs.length} call${rs.length === 1 ? "" : "s"}` : "no calls yet";
 
-  // budget meter
   const budget = s.budgetUsd || 0;
   const pct = budget ? Math.min(100, (total / budget) * 100) : 0;
-  document.getElementById("pct").textContent = pct.toFixed(0) + "%";
-  document.getElementById("budget").textContent =
-    usd(total) + " of " + usd(budget) + " ceiling";
+  document.getElementById("pct").innerHTML =
+    pct.toFixed(0) + `<span class="unit">%</span>`;
+  document.getElementById("budget").textContent = `${usd(total)} of ${usd(budget)} ceiling`;
+
   const byRoute = {};
   for (const r of rs) byRoute[r.route] = (byRoute[r.route] || 0) + (r.usd || 0);
-  document.getElementById("meter").innerHTML = Object.entries(byRoute)
-    .map(([route, v]) => `<i style="width:${budget ? (v / budget) * 100 : 0}%;background:${color(route)}"></i>`)
-    .join("");
+  const entries = Object.entries(byRoute).sort((a, b) => b[1] - a[1]);
 
-  // route split
+  document.getElementById("meter").innerHTML = entries
+    .map(([r, v]) => `<i style="width:${budget ? (v / budget) * 100 : 0}%;background:${color(r)}"></i>`)
+    .join("") || `<i style="width:0"></i>`;
+
+  // split — min-width on segments keeps a small slice legible
   const splitEl = document.getElementById("split");
   const keysEl = document.getElementById("keys");
-  const entries = Object.entries(byRoute).sort((a, b) => b[1] - a[1]);
   if (!entries.length) {
-    splitEl.innerHTML = `<i style="width:100%;background:var(--rule)"></i>`;
-    keysEl.innerHTML = `<span class="key"><span>no settlements yet</span></span>`;
+    splitEl.innerHTML = `<i style="width:100%;background:var(--hair)"></i>`;
+    keysEl.innerHTML = `<div class="key"><span class="ct">no settlements yet</span></div>`;
   } else {
     splitEl.innerHTML = entries
-      .map(([r, v]) => `<i style="width:${(v / total) * 100}%;background:${color(r)}" title="${name(r)}"></i>`)
-      .join("");
-    keysEl.innerHTML = entries
-      .map(([r, v]) => {
-        const n = rs.filter(x => x.route === r).length;
-        return `<span class="key"><span class="sw" style="background:${color(r)}"></span>` +
-               `<b>${name(r)}</b><span>${usd(v)} · ${n} call${n === 1 ? "" : "s"}</span></span>`;
-      })
-      .join("");
+      .map(([r, v]) => `<i style="width:${(v / total) * 100}%;background:${color(r)}"></i>`).join("");
+    keysEl.innerHTML = entries.map(([r, v]) => {
+      const n = rs.filter(x => x.route === r).length;
+      return `<div class="key">
+        <span class="sw" style="background:${color(r)}"></span>
+        <span class="nm">${name(r)}</span>
+        <span class="ct">${n} call${n === 1 ? "" : "s"} &middot; ${((v / total) * 100).toFixed(0)}%</span>
+        <span class="vl">${usd(v)}</span></div>`;
+    }).join("");
   }
 
   // custody
@@ -257,71 +346,68 @@ function render(s) {
   document.getElementById("policyPill").innerHTML =
     p.source === "device"
       ? (p.verified
-          ? `<span class="pill ok">device-signed · verified</span>`
+          ? `<span class="pill ok">device-signed &middot; verified</span>`
           : `<span class="pill no">signature invalid</span>`)
       : `<span class="pill no">unsigned</span>`;
-  const tam = p.tamper;
-  document.getElementById("tamper").innerHTML = tam
-    ? `<div class="t">agent rewrites its own cap:
-         <span class="strike">${tam.from}</span> &rarr; ${tam.to}</div>
-       <div class="t" style="margin-top:6px;color:${tam.refused ? "var(--good)" : "var(--bad)"}">
-         ${tam.refused ? "REFUSED" : "ACCEPTED — this would be a hole"}</div>
-       ${tam.reason ? `<div class="why">${tam.reason}</div>` : ""}`
-    : "";
   document.getElementById("policyKv").innerHTML = p.signer
-    ? `<dt>signer</dt><dd>${p.signer}</dd><dt>agent</dt><dd>${p.agent || ""}</dd>` +
+    ? `<dt>signer</dt><dd title="${p.signer}">${p.signer}</dd>` +
+      `<dt>agent</dt><dd title="${p.agent || ""}">${p.agent || ""}</dd>` +
       Object.entries(p.caps || {}).map(([k, v]) =>
-        `<dt>cap</dt><dd>${name(k.split("|")[0])} ≤ ${v}</dd>`).join("")
+        `<dt>cap</dt><dd>${name(k.split("|")[0])} &le; ${v}</dd>`).join("")
     : `<dt>state</dt><dd>run custody sign-policy</dd>`;
 
-  // services: the 402 each one returns, rendered
-  const svcEl = document.getElementById("services");
+  const tam = p.tamper;
+  document.getElementById("tamper").innerHTML = tam
+    ? `<div class="ln">agent rewrites its own cap &nbsp;<span class="strike">${tam.from}</span> &rarr; ${tam.to}</div>
+       <div class="verdict" style="color:${tam.refused ? "var(--good)" : "var(--bad)"}">
+         ${tam.refused ? "REFUSED" : "ACCEPTED — this would be a hole"}</div>
+       ${tam.reason ? `<div class="why">${esc(tam.reason)}</div>` : ""}`
+    : "";
+
+  // services — the live 402
   const svcs = s.services || [];
-  svcEl.innerHTML = svcs.length ? svcs.map(sv => {
+  document.getElementById("services").innerHTML = svcs.length ? svcs.map(sv => {
     const offers = (sv.routes || []).map(o => `
-      <div class="offer" style="--r:${color(o.network)}">
-        <div class="r"><span class="sw" style="background:${color(o.network)}"></span>${name(o.network)}</div>
-        <div class="p">${o.amount} <span style="color:var(--ink-3)">${o.asset}</span></div>
-        <div class="m">to ${o.payTo}</div>
-        ${o.feePayer ? `<div class="m">gas paid by ${o.feePayer}</div>` : ""}
-        ${o.scheme ? `<div class="m">${o.scheme}</div>` : ""}
+      <div class="offer" style="--c:${color(o.network)}">
+        <div class="rt"><span class="sw" style="background:${color(o.network)}"></span>${name(o.network)}</div>
+        <div class="amt">${o.amount}<small>${esc(o.asset).slice(0, 22)}</small></div>
+        <div class="meta" title="${esc(o.payTo)}">&rarr; ${esc(o.payTo)}</div>
+        ${o.feePayer ? `<div class="meta">gas paid by ${esc(o.feePayer)}</div>` : ""}
+        ${o.scheme ? `<div class="meta">${esc(o.scheme)}</div>` : ""}
       </div>`).join("");
+    const n = (sv.routes || []).length;
     return `<div class="svc">
-      <div class="svc-h"><b>${sv.name}</b><span class="sub">${sv.description}</span></div>
+      <div class="svc-h"><b>${esc(sv.name)}</b><em>${esc(sv.description)}</em></div>
       ${offers ? `<div class="offers">${offers}</div>` : ""}
-      <div class="offers-note">${
+      <div class="claim">${
         sv.reachable
-          ? (sv.routes || []).length
-            ? `${sv.routes.length} route${sv.routes.length === 1 ? "" : "s"} offered in one 402 — the buyer picks`
-            : `reachable, no routes advertised${sv.note ? " (" + sv.note + ")" : ""}`
-          : `unreachable${sv.note ? " — " + sv.note : ""}`
-      }</div>
-    </div>`;
+          ? n ? `<b>${n} route${n === 1 ? "" : "s"} in a single 402.</b> The seller offers both; the buyer's signed policy picks one.`
+              : `Reachable, but advertising no routes${sv.note ? ` (${esc(sv.note)})` : ""}.`
+          : `Unreachable${sv.note ? ` &mdash; ${esc(sv.note)}` : ""}.`
+      }</div></div>`;
   }).join("") : `<div class="empty">No services configured.</div>`;
 
-  // agent transcript
+  // agent
   const acts = s.activity || [];
-  const actEl = document.getElementById("activity");
-  actEl.innerHTML = acts.map(a => {
-    const t = new Date(a.at).toLocaleTimeString();
-    const cls = a.kind === "answer" ? "answer" : "";
-    return `<dt>${a.kind}</dt><dd class="${cls}">${a.text.replace(/</g, "&lt;")}` +
-           `${a.detail ? `<div class="d">${a.detail.replace(/</g, "&lt;")}</div>` : ""}</dd>`;
-  }).join("");
+  document.getElementById("activity").innerHTML = acts.map(a =>
+    `<div class="row ${a.kind}">
+       <div class="kind">${a.kind}</div>
+       <div class="txt">${esc(a.text)}</div>
+       ${a.detail ? `<div class="det">${esc(a.detail)}</div>` : ""}
+     </div>`).join("");
   document.getElementById("actEmpty").style.display = acts.length ? "none" : "block";
 
-  // feed, newest first
-  const feed = document.getElementById("feed");
+  // feed
   const fresh = rs.length > seen;
-  feed.innerHTML = rs.slice().reverse().map((r, i) => `
+  document.getElementById("feed").innerHTML = rs.slice().reverse().map((r, i) => `
     <tr class="${fresh && i === 0 ? "fresh" : ""}">
       <td class="num">${new Date(r.at).toLocaleTimeString()}</td>
-      <td>${r.service}</td>
+      <td>${esc(r.service)}</td>
       <td><span class="tag"><span class="sw" style="background:${color(r.route)}"></span>${name(r.route)}</span></td>
       <td class="num">${r.amount}</td>
-      <td class="num">${usd(r.usd || 0)}</td>
-      <td>${r.reason || ""}</td>
-      <td class="ref" title="${r.settlementRef || ""}">${r.settlementRef || "—"}</td>
+      <td class="num strong">${usd(r.usd || 0)}</td>
+      <td style="color:var(--ink-2)">${esc(r.reason || "")}</td>
+      <td class="ref" title="${esc(r.settlementRef || "")}">${esc(r.settlementRef || "—")}</td>
     </tr>`).join("");
   document.getElementById("empty").style.display = rs.length ? "none" : "block";
   seen = rs.length;
