@@ -119,19 +119,33 @@ export function createWallet(config: WalletConfig): Wallet {
 
       const paid = await fetch(url, { headers });
       if (!paid.ok) {
-        // A rejection re-sends PAYMENT-REQUIRED, whose `error` field says why.
-        // Without it the failure is just "402" and tells you nothing.
+        // Prefer the service's own error body: when a handler fails, the
+        // paywall cancels settlement and the useful reason ("unsupported symbol,
+        // supported: …") is in the body, while the header carries settlement
+        // plumbing such as "fetch failed". An agent can only correct a request
+        // from the former.
+        const raw = await paid.text();
         let detail = "";
         try {
-          const again = http.getPaymentRequiredResponse((n) =>
-            paid.headers.get(n),
-          );
-          detail = (again as { error?: string }).error ?? "";
+          const parsed = JSON.parse(raw) as { error?: string; supported?: string[] };
+          if (parsed.error) {
+            detail = parsed.supported
+              ? `${parsed.error}`
+              : parsed.error;
+          }
         } catch {
-          detail = (await paid.text()).slice(0, 200);
+          /* not JSON */
+        }
+        if (!detail) {
+          try {
+            const again = http.getPaymentRequiredResponse((n) => paid.headers.get(n));
+            detail = (again as { error?: string }).error ?? raw.slice(0, 200);
+          } catch {
+            detail = raw.slice(0, 200);
+          }
         }
         throw new Error(
-          `payment rejected (HTTP ${paid.status})${detail ? `: ${detail}` : ""}`,
+          `request failed and was not charged (HTTP ${paid.status})${detail ? `: ${detail}` : ""}`,
         );
       }
 
