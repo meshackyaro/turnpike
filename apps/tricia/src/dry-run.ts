@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { createWallet, HEDERA, ARC } from "@turnpike/wallet";
-import { CATALOG, findService, buildUrl } from "./catalog.js";
+import { CATALOG, findService, buildUrl, appendActivity } from "@turnpike/wallet";
 import { loadPolicy } from "./ledger.js";
 
 config({
@@ -37,6 +37,15 @@ async function main() {
     policy: loaded.policy,
   });
 
+  appendActivity({
+    kind: "note",
+    text: "dry run — tools exercised without the model",
+  });
+  appendActivity({
+    kind: "tool",
+    text: "search_services",
+    detail: `${CATALOG.length} service(s) listed`,
+  });
   console.log(`\nsearch_services -> ${CATALOG.length} service(s)`);
   for (const s of CATALOG) console.log(`  ${s.id.padEnd(10)} ${s.name}`);
 
@@ -52,6 +61,11 @@ async function main() {
   console.log(`  amount      ${result.amount}`);
   if (result.settlementRef) console.log(`  ref         ${result.settlementRef}`);
   if (result.skipped.length) console.log(`  skipped     ${result.skipped.join(", ")}`);
+  appendActivity({
+    kind: "tool",
+    text: "call_service forecast",
+    detail: `settled on ${result.route} — ${result.reason}`,
+  });
   console.log(`\n  ${JSON.stringify(result.body)}`);
 
   console.log(`\nTool path works. Only the model call is untested.`);

@@ -5,7 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import { createWallet, HEDERA, ARC } from "@turnpike/wallet";
-import { CATALOG, findService, buildUrl } from "./catalog.js";
+import { CATALOG, findService, buildUrl, appendActivity } from "@turnpike/wallet";
 import { loadPolicy } from "./ledger.js";
 
 config({
@@ -63,21 +63,29 @@ async function main() {
   console.log(`  budget   $${RUN_BUDGET_USD.toFixed(4)}`);
   console.log(`\nQ: ${QUESTION}\n`);
 
+  appendActivity({ kind: "question", text: QUESTION });
+
   const searchServices = betaZodTool({
     name: "search_services",
     description:
       "List the paid services available on the Turnpike marketplace, with " +
       "what each returns and the parameters it accepts. Call this first.",
     inputSchema: z.object({}),
-    run: async () =>
-      JSON.stringify(
+    run: async () => {
+      appendActivity({
+        kind: "tool",
+        text: "search_services",
+        detail: `${CATALOG.length} service(s) listed`,
+      });
+      return JSON.stringify(
         CATALOG.map((s) => ({
           id: s.id,
           name: s.name,
           description: s.description,
           params: s.params,
         })),
-      ),
+      );
+    },
   });
 
   const callService = betaZodTool({
@@ -114,6 +122,12 @@ async function main() {
         console.log(`        skipped ${result.skipped.join(", ")}: no signer`);
       }
 
+      appendActivity({
+        kind: "tool",
+        text: `call_service ${serviceId}`,
+        detail: `settled on ${result.route} for $${usd.toFixed(5)} — ${result.reason}`,
+      });
+
       return JSON.stringify({
         result: result.body,
         settledOn: result.route,
@@ -145,6 +159,12 @@ async function main() {
     .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
     .map((b) => b.text)
     .join("\n");
+
+  appendActivity({
+    kind: "answer",
+    text,
+    detail: `$${spentUsd().toFixed(5)} across ${spend.length} call(s)`,
+  });
 
   console.log(`\n${text}\n`);
   console.log(`spent $${spentUsd().toFixed(5)} across ${spend.length} call(s)`);

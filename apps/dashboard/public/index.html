@@ -99,6 +99,40 @@ tbody tr.fresh { animation: in .5s ease-out; }
 .kv dd { margin: 0; font-family: var(--mono); font-size: .8rem;
   overflow: hidden; text-overflow: ellipsis; }
 .empty { color: var(--ink-3); padding: 26px 0; text-align: center; font-size: .9rem; }
+
+/* services — the live 402, rendered */
+.svc + .svc { margin-top: 14px; border-top: 1px solid var(--rule); padding-top: 14px; }
+.svc-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.svc-h b { font-size: .98rem; }
+.svc-h .sub { font-size: .82rem; }
+.offers { display: grid; gap: 8px; margin-top: 11px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.offer { border: 1px solid var(--rule); border-left: 3px solid var(--r);
+  border-radius: 7px; padding: 10px 12px; }
+.offer .r { display: flex; align-items: center; gap: 7px; font-weight: 600;
+  font-size: .9rem; margin-bottom: 5px; }
+.offer .p { font-family: var(--mono); font-size: .95rem;
+  font-variant-numeric: tabular-nums; }
+.offer .m { font-family: var(--mono); font-size: .72rem; color: var(--ink-3);
+  margin-top: 5px; overflow: hidden; text-overflow: ellipsis; }
+.offers-note { font-size: .82rem; color: var(--ink-3); margin-top: 10px; }
+
+/* agent transcript */
+.act { display: grid; grid-template-columns: 54px 1fr; gap: 3px 12px;
+  font-size: .88rem; }
+.act dt { font-family: var(--mono); font-size: .64rem; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-3); padding-top: 4px; }
+.act dd { margin: 0 0 10px; }
+.act dd .d { color: var(--ink-3); font-size: .82rem; font-family: var(--mono); }
+.act dd.answer { white-space: pre-wrap; border-left: 2px solid var(--good);
+  padding-left: 11px; }
+
+/* custody refusal */
+.tamper { margin-top: 12px; border-top: 1px solid var(--rule); padding-top: 11px; }
+.tamper .t { font-family: var(--mono); font-size: .78rem; }
+.tamper .why { color: var(--ink-3); font-size: .8rem; margin-top: 5px;
+  word-break: break-word; }
+.strike { text-decoration: line-through; color: var(--ink-3); }
 </style>
 </head>
 <body>
@@ -125,6 +159,22 @@ tbody tr.fresh { animation: in .5s ease-out; }
       <div class="label">Custody</div>
       <div id="policyPill"><span class="pill no">no policy</span></div>
       <dl class="kv" id="policyKv"></dl>
+      <div class="tamper" id="tamper"></div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:14px">
+    <div class="panel">
+      <div class="label">On the market &mdash; live 402</div>
+      <div id="services"><div class="empty">probing services&hellip;</div></div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:14px">
+    <div class="panel">
+      <div class="label">Tricia</div>
+      <dl class="act" id="activity"></dl>
+      <div class="empty" id="actEmpty">She has not been asked anything yet.</div>
     </div>
   </div>
 
@@ -210,11 +260,55 @@ function render(s) {
           ? `<span class="pill ok">device-signed · verified</span>`
           : `<span class="pill no">signature invalid</span>`)
       : `<span class="pill no">unsigned</span>`;
+  const tam = p.tamper;
+  document.getElementById("tamper").innerHTML = tam
+    ? `<div class="t">agent rewrites its own cap:
+         <span class="strike">${tam.from}</span> &rarr; ${tam.to}</div>
+       <div class="t" style="margin-top:6px;color:${tam.refused ? "var(--good)" : "var(--bad)"}">
+         ${tam.refused ? "REFUSED" : "ACCEPTED — this would be a hole"}</div>
+       ${tam.reason ? `<div class="why">${tam.reason}</div>` : ""}`
+    : "";
   document.getElementById("policyKv").innerHTML = p.signer
     ? `<dt>signer</dt><dd>${p.signer}</dd><dt>agent</dt><dd>${p.agent || ""}</dd>` +
       Object.entries(p.caps || {}).map(([k, v]) =>
         `<dt>cap</dt><dd>${name(k.split("|")[0])} ≤ ${v}</dd>`).join("")
     : `<dt>state</dt><dd>run custody sign-policy</dd>`;
+
+  // services: the 402 each one returns, rendered
+  const svcEl = document.getElementById("services");
+  const svcs = s.services || [];
+  svcEl.innerHTML = svcs.length ? svcs.map(sv => {
+    const offers = (sv.routes || []).map(o => `
+      <div class="offer" style="--r:${color(o.network)}">
+        <div class="r"><span class="sw" style="background:${color(o.network)}"></span>${name(o.network)}</div>
+        <div class="p">${o.amount} <span style="color:var(--ink-3)">${o.asset}</span></div>
+        <div class="m">to ${o.payTo}</div>
+        ${o.feePayer ? `<div class="m">gas paid by ${o.feePayer}</div>` : ""}
+        ${o.scheme ? `<div class="m">${o.scheme}</div>` : ""}
+      </div>`).join("");
+    return `<div class="svc">
+      <div class="svc-h"><b>${sv.name}</b><span class="sub">${sv.description}</span></div>
+      ${offers ? `<div class="offers">${offers}</div>` : ""}
+      <div class="offers-note">${
+        sv.reachable
+          ? (sv.routes || []).length
+            ? `${sv.routes.length} route${sv.routes.length === 1 ? "" : "s"} offered in one 402 — the buyer picks`
+            : `reachable, no routes advertised${sv.note ? " (" + sv.note + ")" : ""}`
+          : `unreachable${sv.note ? " — " + sv.note : ""}`
+      }</div>
+    </div>`;
+  }).join("") : `<div class="empty">No services configured.</div>`;
+
+  // agent transcript
+  const acts = s.activity || [];
+  const actEl = document.getElementById("activity");
+  actEl.innerHTML = acts.map(a => {
+    const t = new Date(a.at).toLocaleTimeString();
+    const cls = a.kind === "answer" ? "answer" : "";
+    return `<dt>${a.kind}</dt><dd class="${cls}">${a.text.replace(/</g, "&lt;")}` +
+           `${a.detail ? `<div class="d">${a.detail.replace(/</g, "&lt;")}</div>` : ""}</dd>`;
+  }).join("");
+  document.getElementById("actEmpty").style.display = acts.length ? "none" : "block";
 
   // feed, newest first
   const feed = document.getElementById("feed");
