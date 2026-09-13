@@ -13,3 +13,4 @@ dist/
 .speculos/
 policy.signed.json
 .turnpike/
+brand/*.ttf
