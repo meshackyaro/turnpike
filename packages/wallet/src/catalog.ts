@@ -21,9 +21,11 @@ export const CATALOG: Service[] = [
     id: "forecast",
     name: "forecast.turnpike",
     description:
-      "Live spot price plus a 24-hour drift and volatility band, computed from " +
-      "the last 7 days of hourly prices (CoinGecko). Returns spot, a 95% " +
-      "low/mid/high band, the sample count and the timestamp of the last price.",
+      "Live spot price and a forecast band, computed from the last 7 days of " +
+      "hourly prices (CoinGecko). Returns spot; driftOverHorizon and " +
+      "volatilityOverHorizon (both for the whole horizon, as log-returns); " +
+      "hourlyVolatility (per hour); a 95% low/mid/high band; the sample count; " +
+      "and asOf, the timestamp of the last price.",
     url: `${HOST}/forecast`,
     params: {
       symbol: "one of ETH, BTC, HBAR, SOL, AVAX, LINK",

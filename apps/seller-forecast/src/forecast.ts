@@ -23,10 +23,16 @@ export interface Forecast {
   symbol: string;
   spot: number;
   horizonHours: number;
-  /** Expected log-return over the horizon. */
-  drift: number;
-  /** One standard deviation of log-return over the horizon. */
-  volatility: number;
+  /** Expected log-return over the whole horizon, not per hour. */
+  driftOverHorizon: number;
+  /** One standard deviation of log-return per hour. */
+  hourlyVolatility: number;
+  /**
+   * One standard deviation of log-return over the whole horizon, i.e.
+   * hourlyVolatility x sqrt(horizonHours). Named explicitly because a bare
+   * "volatility" was read by the agent as hourly, which overstated it ~5x.
+   */
+  volatilityOverHorizon: number;
   /** 95% band under a lognormal assumption — a range, not a floor. */
   band: { low: number; mid: number; high: number };
   model: string;
@@ -129,8 +135,9 @@ export async function forecast(symbol: string, horizonHours = 24): Promise<Forec
     symbol: upper,
     spot: round(spot),
     horizonHours,
-    drift: Number(drift.toFixed(6)),
-    volatility: Number(spread.toFixed(6)),
+    driftOverHorizon: Number(drift.toFixed(6)),
+    hourlyVolatility: Number(sigma.toFixed(6)),
+    volatilityOverHorizon: Number(spread.toFixed(6)),
     band: {
       low: round(mid * Math.exp(-1.96 * spread)),
       mid: round(mid),
