@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turnpike</title>
+<style>
+:root {
+  --surface: #fcfcfb;
+  --panel: #ffffff;
+  --ink: #15201f;
+  --ink-2: #4a5957;
+  --ink-3: #7b8a87;
+  --rule: #dfe5e3;
+  --hedera: #2a78d6;
+  --arc: #eb6834;
+  --good: #0ca30c;
+  --warn: #eda100;
+  --bad: #e34948;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #1a1a19;
+    --panel: #232322;
+    --ink: #eceeed;
+    --ink-2: #a8b2b0;
+    --ink-3: #7c8785;
+    --rule: #33352f;
+    --hedera: #3987e5;
+    --arc: #d95926;
+    --good: #2fb82f;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--surface); color: var(--ink);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 72px; }
+
+header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+h1 { font-size: 1.5rem; margin: 0; letter-spacing: -.02em; }
+.sub { color: var(--ink-3); font-size: .9rem; }
+.live { margin-left: auto; font-family: var(--mono); font-size: .72rem;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
+  display: flex; align-items: center; gap: 7px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+.dot.off { background: var(--bad); }
+
+.grid { display: grid; gap: 14px; margin-top: 22px; }
+.row3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.panel { background: var(--panel); border: 1px solid var(--rule);
+  border-radius: 10px; padding: 16px 18px; }
+.label { font-family: var(--mono); font-size: .68rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-3); margin-bottom: 9px; }
+.big { font-size: 2rem; font-weight: 600; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; line-height: 1.1; }
+.note { color: var(--ink-3); font-size: .85rem; margin-top: 3px; }
+
+/* budget meter — one value against a ceiling, so a meter, not a chart */
+.meter { height: 10px; border-radius: 5px; background: var(--rule);
+  overflow: hidden; margin-top: 12px; display: flex; }
+.meter i { display: block; height: 100%; }
+.meter i + i { margin-left: 2px; }
+
+/* route split — two categories, direct-labelled, no legend box needed */
+.split { display: flex; height: 30px; border-radius: 6px; overflow: hidden; margin-top: 4px; }
+.split i { display: block; height: 100%; }
+.split i + i { margin-left: 2px; }
+.keys { display: flex; gap: 18px; margin-top: 12px; flex-wrap: wrap; }
+.key { display: flex; align-items: center; gap: 7px; font-size: .86rem; }
+.sw { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.key b { font-variant-numeric: tabular-nums; font-weight: 600; }
+.key span { color: var(--ink-3); }
+
+table { width: 100%; border-collapse: collapse; font-size: .87rem; }
+th { text-align: left; font-family: var(--mono); font-size: .66rem;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
+  font-weight: 500; padding: 0 10px 9px 0; white-space: nowrap; }
+td { padding: 9px 10px 9px 0; border-top: 1px solid var(--rule);
+  vertical-align: top; }
+td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.ref { font-family: var(--mono); font-size: .78rem; color: var(--ink-3);
+  max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.scroll { overflow-x: auto; }
+tbody tr.fresh { animation: in .5s ease-out; }
+@keyframes in { from { background: color-mix(in oklab, var(--good) 14%, transparent); } }
+@media (prefers-reduced-motion: reduce) { tbody tr.fresh { animation: none; } }
+
+.pill { font-family: var(--mono); font-size: .7rem; padding: 3px 8px;
+  border-radius: 999px; border: 1px solid currentColor; }
+.pill.ok { color: var(--good); }
+.pill.no { color: var(--bad); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px;
+  font-size: .84rem; margin-top: 10px; }
+.kv dt { color: var(--ink-3); }
+.kv dd { margin: 0; font-family: var(--mono); font-size: .8rem;
+  overflow: hidden; text-overflow: ellipsis; }
+.empty { color: var(--ink-3); padding: 26px 0; text-align: center; font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Turnpike</h1>
+    <span class="sub">a toll road for AI agents</span>
+    <span class="live"><span class="dot" id="dot"></span><span id="livetext">connecting</span></span>
+  </header>
+
+  <div class="grid row3">
+    <div class="panel">
+      <div class="label">Settled</div>
+      <div class="big" id="total">$0.00000</div>
+      <div class="note" id="calls">no calls yet</div>
+    </div>
+    <div class="panel">
+      <div class="label">Against ceiling</div>
+      <div class="big" id="pct">0%</div>
+      <div class="meter" id="meter"><i style="width:0"></i></div>
+      <div class="note" id="budget"></div>
+    </div>
+    <div class="panel">
+      <div class="label">Custody</div>
+      <div id="policyPill"><span class="pill no">no policy</span></div>
+      <dl class="kv" id="policyKv"></dl>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:14px">
+    <div class="panel">
+      <div class="label">Where it settled</div>
+      <div class="split" id="split"></div>
+      <div class="keys" id="keys"></div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:14px">
+    <div class="panel">
+      <div class="label">Settlements</div>
+      <div class="scroll">
+        <table>
+          <thead><tr>
+            <th>Time</th><th>Service</th><th>Route</th>
+            <th>Amount</th><th>USD</th><th>Why</th><th>Reference</th>
+          </tr></thead>
+          <tbody id="feed"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty">Nothing settled yet. Run the agent or the buyer.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLOR = { "hedera:testnet": "var(--hedera)", "eip155:5042002": "var(--arc)" };
+const NAME  = { "hedera:testnet": "Hedera", "eip155:5042002": "Arc" };
+const color = r => COLOR[r] || "var(--ink-3)";
+const name  = r => NAME[r] || r;
+const usd   = n => "$" + n.toFixed(5);
+
+let seen = 0;
+
+function render(s) {
+  const rs = s.receipts || [];
+  const total = rs.reduce((t, r) => t + (r.usd || 0), 0);
+
+  document.getElementById("total").textContent = usd(total);
+  document.getElementById("calls").textContent =
+    rs.length ? rs.length + (rs.length === 1 ? " call" : " calls") : "no calls yet";
+
+  // budget meter
+  const budget = s.budgetUsd || 0;
+  const pct = budget ? Math.min(100, (total / budget) * 100) : 0;
+  document.getElementById("pct").textContent = pct.toFixed(0) + "%";
+  document.getElementById("budget").textContent =
+    usd(total) + " of " + usd(budget) + " ceiling";
+  const byRoute = {};
+  for (const r of rs) byRoute[r.route] = (byRoute[r.route] || 0) + (r.usd || 0);
+  document.getElementById("meter").innerHTML = Object.entries(byRoute)
+    .map(([route, v]) => `<i style="width:${budget ? (v / budget) * 100 : 0}%;background:${color(route)}"></i>`)
+    .join("");
+
+  // route split
+  const splitEl = document.getElementById("split");
+  const keysEl = document.getElementById("keys");
+  const entries = Object.entries(byRoute).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) {
+    splitEl.innerHTML = `<i style="width:100%;background:var(--rule)"></i>`;
+    keysEl.innerHTML = `<span class="key"><span>no settlements yet</span></span>`;
+  } else {
+    splitEl.innerHTML = entries
+      .map(([r, v]) => `<i style="width:${(v / total) * 100}%;background:${color(r)}" title="${name(r)}"></i>`)
+      .join("");
+    keysEl.innerHTML = entries
+      .map(([r, v]) => {
+        const n = rs.filter(x => x.route === r).length;
+        return `<span class="key"><span class="sw" style="background:${color(r)}"></span>` +
+               `<b>${name(r)}</b><span>${usd(v)} · ${n} call${n === 1 ? "" : "s"}</span></span>`;
+      })
+      .join("");
+  }
+
+  // custody
+  const p = s.policy || {};
+  document.getElementById("policyPill").innerHTML =
+    p.source === "device"
+      ? (p.verified
+          ? `<span class="pill ok">device-signed · verified</span>`
+          : `<span class="pill no">signature invalid</span>`)
+      : `<span class="pill no">unsigned</span>`;
+  document.getElementById("policyKv").innerHTML = p.signer
+    ? `<dt>signer</dt><dd>${p.signer}</dd><dt>agent</dt><dd>${p.agent || ""}</dd>` +
+      Object.entries(p.caps || {}).map(([k, v]) =>
+        `<dt>cap</dt><dd>${name(k.split("|")[0])} ≤ ${v}</dd>`).join("")
+    : `<dt>state</dt><dd>run custody sign-policy</dd>`;
+
+  // feed, newest first
+  const feed = document.getElementById("feed");
+  const fresh = rs.length > seen;
+  feed.innerHTML = rs.slice().reverse().map((r, i) => `
+    <tr class="${fresh && i === 0 ? "fresh" : ""}">
+      <td class="num">${new Date(r.at).toLocaleTimeString()}</td>
+      <td>${r.service}</td>
+      <td><span class="tag"><span class="sw" style="background:${color(r.route)}"></span>${name(r.route)}</span></td>
+      <td class="num">${r.amount}</td>
+      <td class="num">${usd(r.usd || 0)}</td>
+      <td>${r.reason || ""}</td>
+      <td class="ref" title="${r.settlementRef || ""}">${r.settlementRef || "—"}</td>
+    </tr>`).join("");
+  document.getElementById("empty").style.display = rs.length ? "none" : "block";
+  seen = rs.length;
+}
+
+function connect() {
+  const es = new EventSource("/api/stream");
+  es.onopen = () => {
+    document.getElementById("dot").classList.remove("off");
+    document.getElementById("livetext").textContent = "live";
+  };
+  es.onmessage = e => render(JSON.parse(e.data));
+  es.onerror = () => {
+    document.getElementById("dot").classList.add("off");
+    document.getElementById("livetext").textContent = "reconnecting";
+  };
+}
+fetch("/api/state").then(r => r.json()).then(render).catch(() => {});
+connect();
+</script>
+</body>
+</html>

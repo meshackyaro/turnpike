@@ -15,3 +15,5 @@ export {
   type SignedPolicy,
   type PolicyVerdict,
 } from "./policy.js";
+export { appendReceipt, readReceipts, RECEIPTS_LOG, type Receipt } from "./receipts.js";
+export { toUsd } from "./wallet.js";

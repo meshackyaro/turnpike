@@ -6,6 +6,7 @@ import { ExactHederaScheme } from "@x402/hedera/exact/client";
 import { registerBatchScheme } from "@circle-fin/x402-batching/client";
 import { privateKeyToAccount } from "viem/accounts";
 import { chooseRoute, type RouteChoice, type RoutePolicy } from "./selector.js";
+import { appendReceipt } from "./receipts.js";
 
 export const HEDERA: Network = "hedera:testnet";
 export const ARC: Network = "eip155:5042002";
@@ -35,6 +36,15 @@ export interface WalletConfig {
   /** Raw hex ECDSA key. The same key signs for Hedera and every EVM chain. */
   privateKey: string;
   policy: RoutePolicy;
+}
+
+/**
+ * HBAR is 8 decimals, USDC 6. Testnet HBAR has no market price, so it is valued
+ * at the seller's own USDC quote for the same call — enough to put both routes
+ * on one axis without implying the number is a real exchange rate.
+ */
+export function toUsd(route: string, amount: string): number {
+  return route === HEDERA ? (Number(amount) / 1e8) * 0.0335 : Number(amount) / 1e6;
 }
 
 const normalize = (key: string) =>
@@ -129,15 +139,31 @@ export function createWallet(config: WalletConfig): Wallet {
         paid.headers.get(n),
       );
 
+      const route = lastChoice?.chosen.network ?? "unknown";
+      const amount = lastChoice?.chosen.amount ?? "0";
+      const skipped = required.accepts
+        .map((a) => a.network)
+        .filter((n) => !considered.includes(n));
+
+      appendReceipt({
+        at: new Date().toISOString(),
+        service: new URL(url).pathname.replace(/^\//, "") || "unknown",
+        route,
+        amount,
+        asset: lastChoice?.chosen.asset ?? "",
+        usd: toUsd(route, amount),
+        reason: lastChoice?.reason ?? "",
+        settlementRef: settlement?.transaction,
+        skipped,
+      });
+
       return {
         body: (await paid.json()) as T,
-        route: lastChoice?.chosen.network ?? "unknown",
+        route,
         reason: lastChoice?.reason ?? "",
-        amount: lastChoice?.chosen.amount ?? "0",
+        amount,
         settlementRef: settlement?.transaction,
-        skipped: required.accepts
-          .map((a) => a.network)
-          .filter((n) => !considered.includes(n)),
+        skipped,
       };
     },
   };
