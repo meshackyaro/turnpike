@@ -2,6 +2,12 @@ import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import express from "express";
+import dns from "node:dns";
+
+// This network has no IPv6 route: every v6 connect fails instantly, while the
+// facilitator and price feed both publish AAAA records. Trying v4 first stops
+// Node from spending attempts on addresses that cannot answer.
+dns.setDefaultResultOrder("ipv4first");
 
 // One .env at the workspace root; dotenv would otherwise look in this app's cwd.
 config({
@@ -9,13 +15,13 @@ config({
 });
 
 import { paymentMiddlewareFromConfig } from "@x402/express";
-import { HTTPFacilitatorClient } from "@x402/core/server";
 import type { PaymentOption } from "@x402/core/http";
 import type { Network } from "@x402/core/types";
 import { HEDERA_TESTNET_CAIP2, HBAR_ASSET_ID } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/server";
 import { GatewayEvmScheme } from "@circle-fin/x402-batching/server";
-import { forecast } from "./forecast.js";
+import { forecast, SUPPORTED, UnknownSymbolError, UpstreamError } from "./forecast.js";
+import { RetryingFacilitatorClient } from "./facilitator.js";
 
 const PORT = Number(process.env.PORT ?? 4021);
 const PAY_TO = required("HEDERA_ACCOUNT_ID");
@@ -27,7 +33,7 @@ function required(name: string): string {
   return value;
 }
 
-const facilitator = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
+const facilitator = new RetryingFacilitatorClient({ url: FACILITATOR_URL });
 
 // The package exports these as plain strings; Network is a `${string}:${string}`.
 const HEDERA: Network = HEDERA_TESTNET_CAIP2 as Network;
@@ -75,7 +81,7 @@ const schemes = [
 const facilitators = [
   facilitator,
   ...(CIRCLE_FACILITATOR_URL
-    ? [new HTTPFacilitatorClient({ url: CIRCLE_FACILITATOR_URL })]
+    ? [new RetryingFacilitatorClient({ url: CIRCLE_FACILITATOR_URL })]
     : []),
 ];
 
@@ -116,6 +122,35 @@ async function waitForFacilitators(urls: string[], attempts = 6): Promise<void> 
 
 const app = express();
 
+/**
+ * Runs before the paywall. A request that cannot succeed should not be asked to
+ * pay: if the symbol is unsupported or the price feed is down, the buyer gets a
+ * plain 400/502 and no payment is attempted. Letting it fail inside the paid
+ * handler also avoids a charge — the paywall cancels settlement on >= 400 — but
+ * it discards the handler's body and reports its own internal "fetch failed",
+ * which leaves an agent unable to correct the request.
+ */
+app.get("/forecast", async (req, res, next) => {
+  const symbol = String(req.query.symbol ?? "ETH");
+  const horizon = Number(req.query.horizonHours ?? 24);
+
+  if (!Number.isFinite(horizon) || horizon <= 0 || horizon > 720) {
+    return res.status(400).json({ error: "horizonHours must be 1-720" });
+  }
+  try {
+    res.locals.forecast = await forecast(symbol, horizon);
+    next();
+  } catch (error) {
+    if (error instanceof UnknownSymbolError) {
+      return res.status(400).json({ error: error.message, supported: SUPPORTED });
+    }
+    if (error instanceof UpstreamError) {
+      return res.status(502).json({ error: error.message });
+    }
+    next(error);
+  }
+});
+
 await waitForFacilitators([
   FACILITATOR_URL,
   ...(CIRCLE_FACILITATOR_URL ? [CIRCLE_FACILITATOR_URL] : []),
@@ -138,18 +173,8 @@ app.use(
   ),
 );
 
-app.get("/forecast", (req, res) => {
-  const symbol = String(req.query.symbol ?? "ETH");
-  const horizon = Number(req.query.horizonHours ?? 24);
-
-  if (!/^[A-Za-z]{1,10}$/.test(symbol)) {
-    return res.status(400).json({ error: "symbol must be 1-10 letters" });
-  }
-  if (!Number.isFinite(horizon) || horizon <= 0 || horizon > 720) {
-    return res.status(400).json({ error: "horizonHours must be 1-720" });
-  }
-
-  res.json(forecast(symbol, horizon));
+app.get("/forecast", (_req, res) => {
+  res.json(res.locals.forecast);
 });
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
